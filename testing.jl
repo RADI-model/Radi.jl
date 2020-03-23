@@ -1,4 +1,4 @@
-module Tst
+module tst
 
 using Plots
 Plots.default(show=true)
@@ -7,10 +7,39 @@ Plots.closeall()
 include("RADI.jl")
 import .RADI
 
-depths, oxy = RADI.model(0.0, 10.0, 0.1, 10)
+depths, oxy, poc = RADI.model(5.0, 1/128000, 128000)
 
 plot(depths, oxy)
 
 RADI.say_RADI()
 
-end # module Tst
+# # Trying out composite type but slower and too clever for its own good
+# struct PorewaterVariable
+#     depths::Array{Float64,1}
+#     start::Array{Float64,1}
+#     previous::Array{Float64,1}
+#     now::Array{Float64,1}
+#     npts::Int64
+#     overlying::Float64
+# end # struct PorewaterVariable
+# 
+# function PorewaterVariable(depths::Array{Float64,1}, start::Array{Float64,1},
+#         overlying::Float64)
+#     npts = length(depths)
+#     previous = fill(NaN, npts)
+#     PorewaterVariable(depths, start, previous, start, npts, overlying)
+# end # function PorewaterVariable
+#
+# function PorewaterVariable(depths::Array{Float64,1}, start::Float64,
+#         overlying::Float64)
+#     npts = length(depths)
+#     start = fill(start, npts)
+#     previous = fill(NaN, npts)
+#     PorewaterVariable(depths, start, previous, start, npts, overlying)
+# end # function PorewaterVariable
+#
+# function now2previous!(myh::PorewaterVariable)
+#     myh.previous[:] = myh.now
+# end # function now2previous!
+
+end # module tst
