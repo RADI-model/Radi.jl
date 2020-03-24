@@ -172,7 +172,8 @@ function model(stoptime, interval, saveperXsteps)
     "Accumulation of solids at the sediment-water interface."
     function accumulate!(var0::Array{Float64,1}, var::Array{Float64,1},
             var_w::Float64)
-        var[z] += interval*(2.0*(Foc - phiS[1]*w[1]*var0[1])/D_bio[1]*phiS[1])
+        var[z] += interval*(2.0*(Foc - phiS[1]*w[1]*var0[1])/
+            (D_bio[1]*phiS[1]*z_res) + w[1]*Foc)
     end # function accumulate!
 
     "Accumulation of solids within the sediment."
