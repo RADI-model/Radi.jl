@@ -119,7 +119,6 @@ function model(stoptime, interval, saveperXsteps)
     DFF = @. (tort2*delta_phi/phi - delta_tort2)/tort2^2
     # DBF = @. D_bio*(phiS - delta_phi) # not used?
     TR = @. 2z_res*tort2/dbl
-    TR_1 = TR[1]
 
     # Create arrays for saved variables
     oxy_save = fill(NaN, (ndepths, nsps))
@@ -129,20 +128,21 @@ function model(stoptime, interval, saveperXsteps)
     function diffuse!(z::Int, var0::Array{Float64,1}, var::Array{Float64,1},
             D_var::Float64)
         # In MATLAB, there was an extra factor of 2 in here?
-        var[z] += interval*(var0[z+1] - 2var0[z] + var0[z-1])*D_var/z_res2
+        var[z] += interval*(var0[z+1] - 2.0var0[z] + var0[z-1])*D_var/z_res2
     end # function diffuse!
 
     "Diffusion across the sediment-water interface."
     function diffuse!(var0::Array{Float64,1}, var::Array{Float64,1},
             D_var::Float64, var_w::Float64)
-        var[1] += interval*(2(var0[2] - var0[1]) + TR_1*(var_w - var0[1]))*
+        var[1] += interval*(2.0(var0[2] - var0[1]) + TR[1]*(var_w - var0[1]))*
             D_var/z_res2
     end # function diffuse!
 
     "Diffusion at the bottom of the modelled sediment."
     function diffuse!(var0::Array{Float64,1}, var::Array{Float64,1},
             D_var::Float64)
-        var[ndepths] += interval*2(var0[ndepths-1] - var0[ndepths])*D_var/z_res2
+        var[ndepths] += interval*2.0(var0[ndepths-1] - var0[ndepths])*
+            D_var/z_res2
     end # function diffuse!
 
     "Irrigation throughout the sediment."
@@ -156,6 +156,37 @@ function model(stoptime, interval, saveperXsteps)
         var[z] += interval*rate
     end # function react!
 
+    "Burial of solutes at the sediment-water interface."
+    function bury!(var0::Array{Float64,1}, var::Array{Float64,1},
+            var_w::Float64)
+        var[1] += interval*u[1]*TR[1]*(var_w - var0[1])/2.0z_res
+    end # function bury!
+
+    "Burial of solutes throughout the sediment."
+    function bury!(z::Int, var0::Array{Float64,1}, var::Array{Float64,1},
+            D_var::Float64)
+        var[z] -= interval*(u[z] - D_var*DFF[z])*
+            (var0[z+1] - var0[z-1])/2.0z_res
+    end # function bury!
+
+    "Accumulation of solids at the sediment-water interface."
+    function accumulate!(var0::Array{Float64,1}, var::Array{Float64,1},
+            var_w::Float64)
+        var[z] += interval*(2.0*(Foc - phiS[1]*w[1]*var0[1])/D_bio[1]*phiS[1])
+    end # function accumulate!
+
+    "Accumulation of solids within the sediment."
+    function accumulate!(z::Int, var0::Array{Float64,1}, var::Array{Float64,1})
+        var[z] -= interval*APPW[z]*
+            ((1.0 - sigma[z])*var0[z] - (1.0 + sigma[z])*var0[z-1])/2.0z_res
+    end # function accumulate!
+
+    "Accumulation of solids at the bottom of the modelled sediment."
+    function accumulate!(var0::Array{Float64,1}, var::Array{Float64,1})
+        var[ndepths] -= interval*APPW[ndepths]*sigma[ndepths]*
+            (var0[ndepths] - var0[ndepths-1])/z_res
+    end #function accumulate!
+
     # ===== Run RADI run: main model loop ======================================
     for t in 1:ntps
         tsave = t in savepoints # do we save this time?
@@ -165,14 +196,19 @@ function model(stoptime, interval, saveperXsteps)
             if z == 1
                 diffuse!(oxy0, oxy, D_oxy_tort2[z], oxy_w)
                 diffuse!(poc0, poc, D_bio[z], poc0[z])
+                bury!(oxy0, oxy, oxy_w)
+                accumulate!(poc0, poc, )
         # --- At the bottom of the modelled sediment: --------------------------
             elseif z == ndepths
                 diffuse!(oxy0, oxy, D_oxy_tort2[z])
                 diffuse!(poc0, poc, D_bio[z])
+                accumulate!(poc0, poc)
         # --- Only internally within the sediment (excl. top and bottom): ------
             else
                 diffuse!(z, oxy0, oxy, D_oxy_tort2[z])
                 diffuse!(z, poc0, poc, D_bio[z])
+                bury!(z, oxy0, oxy, D_oxy)
+                accumulate!(z, poc0, poc)
             end # if
         # --- Everywhere within the sediment (incl. top and bottom): -----------
             irrigate!(z, oxy0, oxy, oxy_w)
