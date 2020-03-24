@@ -9,7 +9,9 @@ import .RADI
 
 depths, oxy, poc = RADI.model(5.0, 1/128000, 128000)
 
-plot(depths, oxy)
+p1 = plot(depths.*100, oxy.*1e3, legend=false)
+p2 = plot(depths.*100, poc, legend=false)
+plot(p1, p2, layout=(2, 1))
 
 RADI.say_RADI()
 
@@ -22,7 +24,7 @@ RADI.say_RADI()
 #     npts::Int64
 #     overlying::Float64
 # end # struct PorewaterVariable
-# 
+#
 # function PorewaterVariable(depths::Array{Float64,1}, start::Array{Float64,1},
 #         overlying::Float64)
 #     npts = length(depths)
