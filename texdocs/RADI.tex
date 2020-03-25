@@ -61,7 +61,7 @@ The model layers are therefore at depths within the sediment from $0$ to $Z$ in 
 
 \subsubsection{Overlying water}
 
-Properties of the overlying water can be changed by the user each time RADI runs.
+Properties of the overlying water can be changed by the user each time RADI.jl runs.
 
 \begin{itemize}
   \item $[\ce{O2}]_w$ ($\code{oxy\_w}$ in $\molmmm$) is the seawater dissolved oxygen concentration.
@@ -78,6 +78,7 @@ where $\phi_\infty = 0.74$, $\phi_0 = 0.85$ ($\code{phiInf}$ and $\code{phi0}$ r
 \begin{equation}\label{phiS}
 \phi_s = 1 - \phi
 \end{equation}
+RADI.jl also creates the convenience variable $\code{phiS\_phi} = \phi_s/\phi$.
 
 Following \citet{archer_model_2002}, the surface sediment bioturbation coefficient $B_0$ ($\code{D\_bio\_0}$ in m$^2\cdot$a$^{-1}$) is:
 \begin{equation}\label{D_bio_0}
@@ -131,9 +132,9 @@ where:
 
 Reaction processes operate on the entire sediment column, including the very top and bottom layers. Biogeochemical reactions for both solutes and solids are modelled as:
 \begin{equation}
-R(v_t) = r(v) \, \D{t}
+R(v_t) = r(v_t) \, \D{t}
 \end{equation}
-where $r(v)$ is the net rate at which $v$ is being consumed (negative $r_v$) or created (positive $r_v$) by biogeochemical reactions.
+where $r(v_t)$ is the net rate at which $v$ is being consumed (negative $r(v_t)$) or created (positive $r(v_t)$) by biogeochemical reactions.
 
 \subsection{Organic matter degradation}
 
@@ -149,6 +150,31 @@ where the rate constant $k_z$ was defined in Eq. \eqref{k_poc_degradation}, and 
 \section{Advection}
 
 \section{Diffusion}
+
+Diffusion is handled separately (1) at the sediment-water interface (i.e. where $z = 0$), (2) within the sediment ($0 < z < Z$), and (3) at the bottom of the sediment ($z = Z$).
+
+Diffusion is controlled by each variable's diffusion coefficient (generically $d(v)$, $\code{D\_var}$ in m$^2\cdot$a$^{-1}$). For dissolved oxygen:
+\begin{equation}
+d(\ce{O2}) = (0.034862 + 0.001409 T) / \theta^2
+\end{equation}
+where the temperature function is from 
+
+\subsection{Diffusion at the sediment-water interface}
+
+
+
+\subsection{Diffusion within the sediment}
+
+At depth $z$:
+
+\begin{equation}
+D(v_z) = d(v_z) \cdot (v_{z+1} - 2 v_z + v_{z-1}) \cdot \D{t} / (\D{z})^2
+\end{equation}
+where $d(v_z)$ is the relevant diffusion coefficient.
+
+\subsection{Diffusion at the bottom of the sediment}
+
+
 
 \section{Irrigation}
 
