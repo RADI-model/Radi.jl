@@ -29,3 +29,4 @@ Manifest.toml
 *.blg
 *.dvi
 *.log
+*.out
