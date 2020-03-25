@@ -1,6 +1,5 @@
 #!/bin/bash
 pdflatex RADI
-bibtexRADI
+bibtex RADI
 pdflatex RADI
 pdflatex RADI
-
