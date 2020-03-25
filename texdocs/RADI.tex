@@ -62,16 +62,16 @@ The model layers are therefore at depths within the sediment from $0$ to $Z$ in 
 
 \subsubsection{Sediment properties}
 
-The depth-varying porosity ($\phi$) is parameterised following BOUDREAU:
+The depth-varying porosity ($\phi$) is parameterised following \citet{boudreau_method--lines_1996}:
 \begin{equation}\label{phi}
 \phi = \phi_\infty + (\phi_0 - \phi_\infty) \exp(-\beta z)
 \end{equation}
-where $\phi_\infty = 0.74$, $\phi_0 = 0.85$ and $\beta = 33$ (BOUDREAU). The corresponding ``solid porosity'' is:
+where $\phi_\infty = 0.74$, $\phi_0 = 0.85$ and $\beta = 33$ \citep{boudreau_method--lines_1996}. The corresponding ``solid porosity'' is:
 \begin{equation}\label{phiS}
 \phi_s = 1 - \phi
 \end{equation}
 
-Following ARCHER, the surface sediment bioturbation coefficient $B_0$ is:
+Following \citet{archer_model_2002}, the surface sediment bioturbation coefficient $B_0$ is:
 \begin{equation}
 B_0 = 0.0232 F^{\,0.85}
 \end{equation}
@@ -79,7 +79,7 @@ This propagates down through the sediment following:
 \begin{equation}
 B_z = B_0 \exp(-z/\lambda_b) \conc{oxy} / (\conc{oxy} + 0.02 \, \uM)
 \end{equation}
-where $\lambda_b$ is the characteristic depth of 0.08 m, following MARTINS.
+where $\lambda_b$ is the characteristic depth of 0.08 m, following \citet{sayles_benthic_2001}.
 
 The rate constant for organic matter degradation ($k_z$) is:
 \begin{equation}\label{k_poc_degradation}
