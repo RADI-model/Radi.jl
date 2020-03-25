@@ -1,0 +1,141 @@
+\documentclass{article}
+\usepackage{siunitx}
+
+\newcommand{\D}[1]{\mathrm{d}#1}
+\newcommand{\code}[1]{\texttt{#1}}
+\newcommand{\conc}[1]{[\code{#1}]}
+\newcommand{\uM}{\si{\micro}\mathrm{M}}
+\newcommand{\eqref}[1]{(\ref{#1})}
+
+\begin{document}
+
+\title{RADI.jl}
+\author{Olivier Sulpis and Matthew P. Humphreys}
+
+\maketitle
+
+\begin{abstract}
+RADI.jl is a Julia implementation of RADI: the 1-D Reaction-Advection-Diffusion-Irrigation Diagenetic Sediment Module. Here, we define the variables and the equations used in this implementation. So far, only one solute (dissolved oxygen) and one solid (particulate organic carbon) are included and documented here.
+\end{abstract}
+
+% \section{Variables}
+%
+% \subsection{Solutes}
+%
+% \subsection{Solids}
+%
+% \section{Processes}
+%
+% \subsection{Solutes}
+%
+% \subsection{Solids}
+
+\section{Parameters}
+
+\subsection{Time}
+
+Time units are always in ???
+\begin{itemize}
+  \item $T$ is the total time that the model runs for.
+  \item $\D{t}$ is the time resolution (i.e. the interval between each timestep).
+  \item $t$ refers to a specific modelled point in time (i.e. timestep).
+\end{itemize}
+The model therefore runs from time $0$ to $T$ in intervals of $\D{t}$.
+
+\subsection{Sediment column}
+
+\subsubsection{Structure}
+
+Depth units are always in metres.
+\begin{itemize}
+  \item $Z$ is the total thickness of the sediment column being modelled.
+  \item $\D{z}$ is the depth resolution (i.e. the height of each model layer).
+  \item $z$ refers to a specific modelled depth within the sediment.
+\end{itemize}
+The model layers are therefore at depths within the sediment from $0$ to $Z$ in increments of $\D{z}$, where $0$ represents the interface between the surface sediment and overlying seawater.
+
+\subsubsection{Overlying water}
+
+
+
+\subsubsection{Sediment properties}
+
+The depth-varying porosity ($\phi$) is parameterised following BOUDREAU:
+\begin{equation}\label{phi}
+\phi = \phi_\infty + (\phi_0 - \phi_\infty) \exp(-\beta z)
+\end{equation}
+where $\phi_\infty = 0.74$, $\phi_0 = 0.85$ and $\beta = 33$ (BOUDREAU). The corresponding ``solid porosity'' is:
+\begin{equation}\label{phiS}
+\phi_s = 1 - \phi
+\end{equation}
+
+Following ARCHER, the surface sediment bioturbation coefficient $B_0$ is:
+\begin{equation}
+B_0 = 0.0232 F^{\,0.85}
+\end{equation}
+This propagates down through the sediment following:
+\begin{equation}
+B_z = B_0 \exp(-z/\lambda_b) \conc{oxy} / (\conc{oxy} + 0.02 \, \uM)
+\end{equation}
+where $\lambda_b$ is the characteristic depth of 0.08 m, following MARTINS.
+
+The rate constant for organic matter degradation ($k_z$) is:
+\begin{equation}\label{k_poc_degradation}
+k_z = 80.25 B_0 \exp(-z)
+\end{equation}
+
+\section{Variables}
+
+\subsection{Porewater solutes}
+
+\begin{itemize}
+  \item Dissolved oxygen: \code{oxy}.
+\end{itemize}
+
+\subsection{Solids}
+
+\begin{itemize}
+  \item Particulate organic carbon: \code{poc}.
+\end{itemize}
+
+\section{Master equation}
+
+For each modelled variable $v$:
+\begin{equation}
+v_{t+1} = v_t + R(v_t) + A(v_t) + D(v_t) + I(v_t)
+\end{equation}
+where:
+\begin{itemize}
+  \item $v_t$ is the concentration of the variable $v$ at timestep $t$ at a specific depth in the sediment ($z$).
+  \item $R(v_t)$ quantifies the effect of \textbf{reactions} on $v$ from $t$ to $t+1$.
+  \item $A(v_t)$ quantifies the effect of \textbf{advection} on $v$ from $t$ to $t+1$.
+  \item $D(v_t)$ quantifies the effect of \textbf{diffusion} on $v$ from $t$ to $t+1$.
+  \item $I(v_t)$ quantifies the effect of \textbf{irrigation} on $v$ from $t$ to $t+1$.
+\end{itemize}
+
+\section{Reaction}
+
+Biogeochemical reactions for both solutes and solids are modelled as:
+\begin{equation}
+R(v_t) = r(v) \, \D{t}
+\end{equation}
+where $r(v)$ is the net rate at which $v$ is being consumed (negative $r_v$) or created (positive $r_v$) by biogeochemical reactions.
+
+\subsection{Organic matter degradation}
+
+Organic matter degradation affects dissolved oxygen (\code{oxy}) and particulate organic carbon (\code{poc}):
+\begin{equation}
+r(\code{poc}) = -k_z \conc{poc}
+\end{equation}
+\begin{equation}
+r(\code{oxy}) = r(\code{poc}) \cdot \phi_s / \phi
+\end{equation}
+where the rate constant $k_z$ was defined in Eq. \eqref{k_poc_degradation}, and porosity coefficients $\phi$ and $\phi_s$ in Eqs. \eqref{phi} and \eqref{phiS} respectively.
+
+\section{Advection}
+
+\section{Diffusion}
+
+\section{Irrigation}
+
+\end{document}
