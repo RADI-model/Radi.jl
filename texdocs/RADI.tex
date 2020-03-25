@@ -10,7 +10,8 @@
 %\newcommand{\conc}[1]{[\code{#1}]}
 \newcommand{\uM}{\si{\micro}\mathrm{M}}
 \newcommand{\molmmm}{\mathrm{mol}\cdot\mathrm{m}^{-3}}
-\newcommand{\wtf}[1]{\textcolor{Aquamarine}{\textbf{#1}}}
+\newcommand{\degC}{\si{\degree}\mathrm{C}}
+\newcommand{\wtf}[1]{\textcolor{Cerulean}{\textbf{#1}}}
 
 \begin{document}
 
@@ -22,18 +23,6 @@
 \begin{abstract}
 RADI.jl is a Julia implementation of RADI: the 1-D Reaction-Advection-Diffusion-Irrigation Diagenetic Sediment Module. Here, we define the variables and the equations used in this implementation. So far, only one solute (dissolved oxygen) and one solid (particulate organic carbon) are included and documented here.
 \end{abstract}
-
-% \section{Variables}
-%
-% \subsection{Solutes}
-%
-% \subsection{Solids}
-%
-% \section{Processes}
-%
-% \subsection{Solutes}
-%
-% \subsection{Solids}
 
 \section{Parameters}
 
@@ -53,7 +42,7 @@ The model therefore runs from time $0$ to $T$ in intervals of $\D{t}$.
 
 Depth units are always in metres.
 \begin{itemize}
-  \item $Z$ ($\code{z\_max}$ in m) is the total thickness of the sediment column being modelled.
+  \item $Z$ ($\code{z\_max}$ in m) is the total height of the sediment column being modelled.
   \item $\D{z}$ ($\code{z\_res}$ in m) is the depth resolution (i.e. the height of each model layer).
   \item $z$ ($\code{depths}$ in m) refers to the array of modelled depths within the sediment.
 \end{itemize}
@@ -66,19 +55,30 @@ Properties of the overlying water can be changed by the user each time RADI.jl r
 \begin{itemize}
   \item $[\ce{O2}]_w$ ($\code{oxy\_w}$ in $\molmmm$) is the seawater dissolved oxygen concentration.
   \item $F_c$ ($\code{Foc}$ in mol$\cdot$m$^{-1}\cdot$a$^{-1}$) is the flux of particulate organic carbon arriving at the seafloor.
+  \item $\delta$ ($\code{dbl}$ in m) is the diffusive boundary layer thickness.
+  \item $T_w$ ($\code{T}$ in $\degC$) is the water temperature.
 \end{itemize}
+\wtf{Note that $T$ is also used for the total model runtime...}
 
 \subsubsection{Sediment properties}
 
-The depth-varying porosity ($\phi$, $\code{phi}$, dimensionless) is parameterised following \citet{boudreau_method--lines_1996}:
+In the current set-up of RADI.jl, the porosity parameters $\phi_\infty$ and $\phi_0$ are set to 0.74 and 0.85 respectively ($\code{phiInf}$ and $\code{phi0}$, both dimensionless), and $\beta = 33$ m$^{-1}$ ($\code{beta}$). These values were obtained by fitting real data from station 7, mooring 3 of cruise NBP98-2 \citep{sayles_benthic_2001}. \wtf{Should these be inputs that the user can easily adjust?}
+
+The porosity profile ($\phi$, $\code{phi}$, dimensionless) is parameterised following \citet{boudreau_method--lines_1996}:
 \begin{equation}\label{phi}
 \phi = \phi_\infty + (\phi_0 - \phi_\infty) \exp(-\beta z)
 \end{equation}
-where $\phi_\infty = 0.74$, $\phi_0 = 0.85$ ($\code{phiInf}$ and $\code{phi0}$ respectively, both dimensionless) and $\beta = 33$ m$^{-1}$ ($\code{beta}$) \citep{boudreau_method--lines_1996}. The corresponding ``solid porosity'' ($\phi_s$, $\code{phiS}$, dimensionless) is:
+The corresponding ``solid porosity'' ($\phi_s$, $\code{phiS}$, dimensionless) is:
 \begin{equation}\label{phiS}
 \phi_s = 1 - \phi
 \end{equation}
-RADI.jl also creates the convenience variable $\code{phiS\_phi} = \phi_s/\phi$.
+RADI.jl also uses the related convenience variable $\code{phiS\_phi} = \phi_s/\phi$.
+
+Following \citet{boudreau_diffusive_1996}, the sediment tortuosity ($\theta$, $\code{tort}$, dimensionless) is:
+\begin{equation}\label{tort}
+\theta = \sqrt{1 - 2 \log \phi}
+\end{equation}
+RADI.jl also uses the related convenience variable $\code{tort2} = \theta^2$.
 
 Following \citet{archer_model_2002}, the surface sediment bioturbation coefficient $B_0$ ($\code{D\_bio\_0}$ in m$^2\cdot$a$^{-1}$) is:
 \begin{equation}\label{D_bio_0}
@@ -87,10 +87,10 @@ B_0 = (0.0232 \cdot 10^{-4}) (F_c \cdot 10^2)^{\,0.85}
 \wtf{Eq. \eqref{D_bio_0}: where do the $10^{-4}$ and $10^2$ multipliers come from?}
 
 The bioturbation coefficient propagates down through the sediment as $B_z$ ($\code{D\_bio}$ in m$^2\cdot$a$^{-1}$):
-\begin{equation}
-B_z = B_0 \exp(-z/\lambda_b) [\ce{O2}]_w / [[\ce{O2}]_w + 0.02 \, \molmmm]
+\begin{equation}\label{B_z}
+B_z = B_0 \exp(-z/\lambda_b) [\ce{O2}]_w / ([\ce{O2}]_w + 0.02 \, \molmmm)
 \end{equation}
-where $\lambda_b$ ($\code{lambda\_b}$ in m) is the characteristic depth of 0.08 m, following \citet{sayles_benthic_2001}.
+where $\lambda_b$ ($\code{lambda\_b}$ in m) is the characteristic depth of 0.08 m, following \citet{sayles_benthic_2001}. \wtf{Where does the magic 0.02 number come from?}
 
 The rate constant for organic matter degradation ($k_z$, $\code{krefractory}$ in a$^{-1}$) is \citep{archer_model_2002}:
 \begin{equation}\label{k_poc_degradation}
@@ -117,15 +117,15 @@ Within the sediment itself:
 
 For each modelled variable $v$:
 \begin{equation}
-v_{t+1} = v_t + R(v_t) + A(v_t) + D(v_t) + I(v_t)
+v_{(t+\D{t})} = v_t + R(v_t) + A(v_t) + D(v_t) + I(v_t)
 \end{equation}
 where:
 \begin{itemize}
   \item $v_t$ is the concentration of the variable $v$ at timestep $t$ at a specific depth in the sediment ($z$).
-  \item $R(v_t)$ quantifies the effect of \textbf{reactions} on $v$ from $t$ to $t+1$.
-  \item $A(v_t)$ quantifies the effect of \textbf{advection} on $v$ from $t$ to $t+1$.
-  \item $D(v_t)$ quantifies the effect of \textbf{diffusion} on $v$ from $t$ to $t+1$.
-  \item $I(v_t)$ quantifies the effect of \textbf{irrigation} on $v$ from $t$ to $t+1$.
+  \item $R(v_t)$ quantifies the effect of \textbf{reactions} on $v$ from $t$ to $t+\D{t}$.
+  \item $A(v_t)$ quantifies the effect of \textbf{advection} on $v$ from $t$ to $t+\D{t}$.
+  \item $D(v_t)$ quantifies the effect of \textbf{diffusion} on $v$ from $t$ to $t+\D{t}$.
+  \item $I(v_t)$ quantifies the effect of \textbf{irrigation} on $v$ from $t$ to $t+\D{t}$.
 \end{itemize}
 
 \section{Reaction}
@@ -149,34 +149,69 @@ where the rate constant $k_z$ was defined in Eq. \eqref{k_poc_degradation}, and 
 
 \section{Advection}
 
+\wtf{Add equations in here!}
+
 \section{Diffusion}
 
 Diffusion is handled separately (1) at the sediment-water interface (i.e. where $z = 0$), (2) within the sediment ($0 < z < Z$), and (3) at the bottom of the sediment ($z = Z$).
 
-Diffusion is controlled by each variable's diffusion coefficient (generically $d(v)$, $\code{D\_var}$ in m$^2\cdot$a$^{-1}$). For dissolved oxygen:
+Diffusion is controlled by each variable's diffusion coefficient (generically $d(v)$, $\code{D\_var}$ in m$^2\cdot$a$^{-1}$).
+
+For dissolved oxygen:
 \begin{equation}
-d(\ce{O2}) = (0.034862 + 0.001409 T) / \theta^2
+d(\ce{O2}) = (0.034862 + 0.001409 T_w) / \theta^2
 \end{equation}
-where the temperature function is from 
+where the temperature function is from \citet{li_diffusion_1974}, and $\theta$ is the tortuosity from Eq. \eqref{tort}.
 
-\subsection{Diffusion at the sediment-water interface}
+For particulate organic carbon:
+\begin{equation}
+d(\mathrm{POC}) = B_z
+\end{equation}
+where $B_z$ was defined in Eq. \eqref{B_z}.
 
+\subsection{Diffusion at the sediment-water interface}\label{sx:diff_swi}
 
+At sediment depth $z = 0$ only:
+\begin{equation}\label{Dv0}
+D(v_0) = d(v_z) \cdot [2 (v_{\D{z}} - v_0) + 2 \theta_0^2 \D{z} (v_w - v_0) / \delta] \cdot \D{t} / (\D{z})^2
+\end{equation}
+where $\theta_0$ is the tortuosity at the sediment surface from Eq. \eqref{tort}. RADI.jl uses the convenience variable $\code{TR} = 2 \theta_0^2 \D{z} / \delta$ to simplify Eq. \eqref{Dv0}.
+
+\wtf{Is the factor of 2 here incorrect? It doubles the upwards diffusive flux relative to that within the sediment. See also similar note in section \ref{sx:diff_bot} below.}
 
 \subsection{Diffusion within the sediment}
 
-At depth $z$:
-
+At sediment depth $z$, where $0 < z < Z$:
 \begin{equation}
-D(v_z) = d(v_z) \cdot (v_{z+1} - 2 v_z + v_{z-1}) \cdot \D{t} / (\D{z})^2
+D(v_z) = d(v_z) \cdot (v_{(z+\D{z})} - 2 v_z + v_{(z-\D{z})}) \cdot \D{t} / (\D{z})^2
 \end{equation}
 where $d(v_z)$ is the relevant diffusion coefficient.
 
-\subsection{Diffusion at the bottom of the sediment}
+\subsection{Diffusion at the bottom of the sediment}\label{sx:diff_bot}
 
-
+At sediment depth $z = Z$ only:
+\begin{equation}
+D(v_Z) = 2 d(v_z) \cdot (-v_Z + v_{(Z-\D{z})}) \cdot \D{t} / (\D{z})^2
+\end{equation}
+\wtf{Is the factor of 2 here incorrect? Without it, this equation would be the same as for `within the sediment', but with no diffusive flux coming up from below. With it, this assumes that whatever diffusive flux comes from above, also comes up from below (i.e. the flux from above is doubled). See also similar note in section \ref{sx:diff_swi} above.}
 
 \section{Irrigation}
+
+Irrigation only affects the solutes (e.g. \ce{O2}), not the solids (e.g. POC). Its effect is consistent throughout the sediment:
+\begin{equation}
+I(v_z) = \alpha_z \cdot (v_w - v_z) \cdot \D{t}
+\end{equation}
+The coefficient $\alpha_z$ ($\code{alpha}$ in a$^{-1}$) at the sediment-water interface (i.e. $\alpha_0$, $\code{alpha\_0}$) is, following \citet{archer_model_2002}:
+\begin{equation}
+\alpha_0 = 11 \Bigg[ \mathrm{atan} \Bigg( \frac{5 F_c \cdot 10^2 - 400}{400 \pi} \Bigg) + 0.5 \Bigg] - 0.9 + \frac{20 [\ce{O2}]_w}{[\ce{O2}]_w + 0.01 \, \molmmm} \cdot \frac{F_c \cdot 10^2}{F_c \cdot 10^2 + 30} \cdot \exp \Bigg(\frac{-[\ce{O2}]_w}{0.01 \, \molmmm}\Bigg)
+\end{equation}
+\wtf{Need to split this across multiple lines! And where do all these magic numbers come from?}
+
+Within the sediment itself:
+\begin{equation}
+\alpha_z = \alpha_0 \exp [-(z/\lambda_i)^2]
+\end{equation}
+where $\lambda_i$ is the \wtf{somewhat mysterious} characteristic depth of \citet{archer_model_2002}.
 
 \bibliography{RADI}
 
