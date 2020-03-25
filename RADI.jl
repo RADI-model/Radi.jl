@@ -50,7 +50,8 @@ function model(stoptime, interval, saveperXsteps)
     # Create arrays for modelled variables
     z_res = 0.001
     z_res2 = z_res^2
-    depths = 0:z_res:0.2 # in m
+    z_max = 0.2
+    depths = 0:z_res:z_max # in m
     ndepths = length(depths)
     oxy0 = fill(oxy_w, (ndepths,))
     oxy = copy(oxy0)
