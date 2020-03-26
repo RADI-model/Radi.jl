@@ -1,6 +1,6 @@
 module tst
 
-using Plots
+using Colors, Plots
 Plots.default(show=true)
 Plots.closeall()
 
@@ -8,9 +8,15 @@ include("RADI.jl")
 import .RADI
 
 depths, oxy, poc = RADI.model(5.0, 1/128000, 128000)
+cmap = colormap("RdBu", size(oxy)[2])
 
-p1 = plot(depths.*100, oxy.*1e3, legend=false)
-p2 = plot(depths.*100, poc, legend=false)
+cs = 1
+p1 = plot(depths*100, oxy[:, 1]*1e3, legend=false, c=cmap[cs])
+p2 = plot(depths*100, poc[:, 1], legend=false, c=cmap[cs])
+for sp in 2:size(oxy)[2]
+    plot!(p1, depths*100, oxy[:, sp]*1e3, legend=false, c=cmap[cs+sp-1])
+    plot!(p2, depths*100, poc[:, sp], legend=false, c=cmap[cs+sp-1])
+end # for sp
 plot(p1, p2, layout=(2, 1))
 
 RADI.say_RADI()
