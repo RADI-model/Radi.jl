@@ -77,7 +77,7 @@ RADI.jl also uses the related convenience variable $\code{phiS\_phi} = \phi_s/\p
 
 Following \citet{boudreau_diffusive_1996}, the sediment tortuosity ($\theta$, $\code{tort}$, dimensionless) is:
 \begin{equation}\label{tort}
-\theta = \sqrt{1 - 2 \log \phi}
+\theta^2 = 1 - 2 \log \phi
 \end{equation}
 RADI.jl also uses the related convenience variable $\code{tort2} = \theta^2$.
 
@@ -89,9 +89,27 @@ b_0 = (0.0232 \cdot 10^{-4}) (F_c \cdot 10^2)^{\,0.85}
 
 The bioturbation coefficient propagates down through the sediment as $b_z$ ($\code{D\_bio}$ in m$^2\cdot$a$^{-1}$):
 \begin{equation}\label{B_z}
-b_z = b_0 \exp(-z/\lambda_b) [\ce{O2}]_w / ([\ce{O2}]_w + 0.02 \, \molmmm)
+b_z = b_0 \exp(-[z/\lambda_b]^2) \cdot \frac{[\ce{O2}]_w}{[\ce{O2}]_w + 0.02 \, \molmmm}
 \end{equation}
 where $\lambda_b$ ($\code{lambda\_b}$ in m) is the characteristic depth of 0.08 m, following \citet{sayles_benthic_2001}. \wtf{Q4: Where does the magic 0.02 number come from?}
+
+We also require the differentials of each of $\phi$, $\phi_s$, $\theta^2$ and $b_z$ with respect to $z$, which are calculated as follows:
+\begin{equation}
+\frac{\D{\phi}}{\D{z}} = -\beta (\phi_0 - \phi_\infty) \exp (-\beta z)
+\end{equation}
+
+\begin{equation}
+\frac{\D{\phi_s}}{\D{z}} = \beta (\phi_0 - \phi_\infty) \exp (-\beta z)
+\end{equation}
+
+\begin{equation}
+\frac{\D{(\theta^2)}}{\D{z}} = \frac{2 \beta (\phi_0 - \phi_\infty)}{\phi_0 + \phi_\infty [\exp(\beta z) - 1]}
+\end{equation}
+
+\begin{equation}
+\frac{\D{b_z}}{\D{z}} = - \frac{2 z b_0}{\lambda_b^2} \exp(-[z/\lambda_b]^2) \cdot \frac{[\ce{O2}]_w}{[\ce{O2}]_w + 0.02 \, \molmmm}
+\end{equation}
+In RADI.jl, these are $\code{delta\_phi}$, $\code{delta\_phiS}$, $\code{delta\_tort2}$ and $\code{delta\_D\_bio}$ respectively.
 
 \section{Variables}
 
