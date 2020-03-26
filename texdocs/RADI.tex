@@ -81,22 +81,17 @@ Following \citet{boudreau_diffusive_1996}, the sediment tortuosity ($\theta$, $\
 \end{equation}
 RADI.jl also uses the related convenience variable $\code{tort2} = \theta^2$.
 
-Following \citet{archer_model_2002}, the surface sediment bioturbation coefficient $B_0$ ($\code{D\_bio\_0}$ in m$^2\cdot$a$^{-1}$) is:
+Following \citet{archer_model_2002}, the surface sediment bioturbation coefficient $b_0$ ($\code{D\_bio\_0}$ in m$^2\cdot$a$^{-1}$) is:
 \begin{equation}\label{D_bio_0}
-B_0 = (0.0232 \cdot 10^{-4}) (F_c \cdot 10^2)^{\,0.85}
+b_0 = (0.0232 \cdot 10^{-4}) (F_c \cdot 10^2)^{\,0.85}
 \end{equation}
 \wtf{Q3: Eq. \eqref{D_bio_0}: where do the $10^{-4}$ and $10^2$ multipliers come from? Are they just unit conversions?}
 
-The bioturbation coefficient propagates down through the sediment as $B_z$ ($\code{D\_bio}$ in m$^2\cdot$a$^{-1}$):
+The bioturbation coefficient propagates down through the sediment as $b_z$ ($\code{D\_bio}$ in m$^2\cdot$a$^{-1}$):
 \begin{equation}\label{B_z}
-B_z = B_0 \exp(-z/\lambda_b) [\ce{O2}]_w / ([\ce{O2}]_w + 0.02 \, \molmmm)
+b_z = b_0 \exp(-z/\lambda_b) [\ce{O2}]_w / ([\ce{O2}]_w + 0.02 \, \molmmm)
 \end{equation}
 where $\lambda_b$ ($\code{lambda\_b}$ in m) is the characteristic depth of 0.08 m, following \citet{sayles_benthic_2001}. \wtf{Q4: Where does the magic 0.02 number come from?}
-
-The rate constant for organic matter degradation ($k_z$, $\code{krefractory}$ in a$^{-1}$) is \citep{archer_model_2002}:
-\begin{equation}\label{k_poc_degradation}
-k_z = 80.25 \, B_0 \exp(-z)
-\end{equation}
 
 \section{Variables}
 
@@ -129,6 +124,10 @@ where:
 \end{itemize}
 In the subsequent sections, only the subscript $z$'s are explicitly written out; the $t$'s are excluded, for clarity.
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% R E A C T I O N %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 \section{Reaction}\label{sx:reaction}
 
 Biogeochemical reactions operate on solutes and solids throughout the entire sediment column, including the very top and bottom layers. $R(v_t)$ is the net rate at which $v$ is being consumed (negative $R$) or created (positive $R$) by these reactions.
@@ -142,11 +141,19 @@ R(\mathrm{POC}) = -k_z [\mathrm{POC}]
 \begin{equation}\label{r_O2}
 R(\ce{O2}) = r(\mathrm{POC}) \cdot \phi_s / \phi
 \end{equation}
-where the rate constant $k_z$ was defined in Eq. \eqref{k_poc_degradation}, and porosity coefficients $\phi$ and $\phi_s$ in Eqs. \eqref{phi} and \eqref{phiS} respectively. \wtf{Q5: Eq. \eqref{r_O2}: should there not be a photosynthetic quotient (C:O$_2$ ratio) in here?}
+where the rate constant $k_z$ for organic matter degradation ($\code{krefractory}$ in a$^{-1}$) is \citep{archer_model_2002}:
+\begin{equation}\label{k_poc_degradation}
+k_z = 80.25 \, b_0 \exp(-z)
+\end{equation}
+\wtf{Eq. \eqref{r_O2}: should there not be a photosynthetic quotient (C:O$_2$ ratio) in here?}
+
+After the reaction rates have been calculated, \codenote{there is a check that they don't make any of the concentrations negative...}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% A D V E C T I O N %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \section{Advection}\label{sx:advection}.
-
-\wtf{Q6: By "advection" do we mean things literally moving around within a static sediment (i.e. porewater is advecting relative to the centre of the Earth), or is it that things to move relatively speaking because the sediment surface moves up as new material settles onto it (i.e. porewater is static relative to the centre of the Earth, but advecting relative to the sediment-water interface)?}
 
 Advection is modelled differently (1) at the sediment-water interface (i.e. where $z = 0$), (2) within the sediment ($0 < z < Z$), and (3) at the bottom of the sediment ($z = Z$).
 
@@ -271,7 +278,7 @@ Within the sediment itself:
 \begin{equation}
 \alpha_z = \alpha_0 \exp [-(z/\lambda_i)^2]
 \end{equation}
-where $\lambda_i = 0.05$ m ($\code{lambda\_i}$) is the characteristic depth of \citet{archer_model_2002}. \wtf{Should $\lambda_i$ be easily adjustable by the user?} 
+where $\lambda_i = 0.05$ m ($\code{lambda\_i}$) is the characteristic depth of \citet{archer_model_2002}. \wtf{Should $\lambda_i$ be easily adjustable by the user?}
 
 \bibliography{RADI}
 

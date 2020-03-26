@@ -7,7 +7,7 @@ Plots.closeall()
 include("RADI.jl")
 import .RADI
 
-depths, oxy, poc = RADI.model(5.0, 1/128000, 128000)
+depths, oxy, poc = RADI.model(10.0, 1/128000, 128000)
 cmap = colormap("RdBu", size(oxy)[2])
 
 cs = 1

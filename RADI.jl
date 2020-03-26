@@ -55,10 +55,10 @@ function model(stoptime, interval, saveperXsteps)
     depths[1] = NaN
     depths[end] = NaN
     ndepths = length(depths)
-    oxy0 = fill(oxy_w*0.5, ndepths)
-    oxy = copy(oxy0)*0
-    poc0 = fill(10.0, ndepths)
-    poc = copy(poc0)*0
+    oxy0 = fill(oxy_w, ndepths)
+    oxy = copy(oxy0)
+    poc0 = fill(100.0, ndepths)
+    poc = copy(poc0)
 
     # Depth-dependent porosity
     phi0 = 0.85
@@ -127,42 +127,37 @@ function model(stoptime, interval, saveperXsteps)
     oxy_save = fill(NaN, (ndepths-2, nsps))
     poc_save = fill(NaN, (ndepths-2, nsps))
 
-    "Reactions throughout the sediment."
-    function react!(z::Int, var::Array{Float64,1}, rate::Float64)
-        var[z] += interval*rate
-    end # function react!
-
-    "Burial of solutes at the sediment-water interface."
-    function bury!(var0::Array{Float64,1}, var::Array{Float64,1},
-            var_w::Float64)
-        var[1] += interval*u[1]*TR[1]*(var_w - var0[1])/2.0z_res
-    end # function bury!
-
-    "Burial of solutes throughout the sediment."
-    function bury!(z::Int, var0::Array{Float64,1}, var::Array{Float64,1},
-            D_var::Float64)
-        var[z] -= interval*(u[z] - D_var*DFF[z])*
-            (var0[z+1] - var0[z-1])/2.0z_res
-    end # function bury!
-
-    "Accumulation of solids at the sediment-water interface."
-    function accumulate!(var0::Array{Float64,1}, var::Array{Float64,1},
-            var_w::Float64)
-        var[z] += interval*(2.0*(Foc - phiS[1]*w[1]*var0[1])/
-            (D_bio[1]*phiS[1]*z_res) + w[1]*Foc)
-    end # function accumulate!
-
-    "Accumulation of solids within the sediment."
-    function accumulate!(z::Int, var0::Array{Float64,1}, var::Array{Float64,1})
-        var[z] -= interval*APPW[z]*
-            ((1.0 - sigma[z])*var0[z] - (1.0 + sigma[z])*var0[z-1])/2.0z_res
-    end # function accumulate!
-
-    "Accumulation of solids at the bottom of the modelled sediment."
-    function accumulate!(var0::Array{Float64,1}, var::Array{Float64,1})
-        var[ndepths] -= interval*APPW[ndepths]*sigma[ndepths]*
-            (var0[ndepths] - var0[ndepths-1])/z_res
-    end #function accumulate!
+    # "Burial of solutes at the sediment-water interface."
+    # function bury!(var0::Array{Float64,1}, var::Array{Float64,1},
+    #         var_w::Float64)
+    #     var[1] += interval*u[1]*TR[1]*(var_w - var0[1])/2.0z_res
+    # end # function bury!
+    #
+    # "Burial of solutes throughout the sediment."
+    # function bury!(z::Int, var0::Array{Float64,1}, var::Array{Float64,1},
+    #         D_var::Float64)
+    #     var[z] -= interval*(u[z] - D_var*DFF[z])*
+    #         (var0[z+1] - var0[z-1])/2.0z_res
+    # end # function bury!
+    #
+    # "Accumulation of solids at the sediment-water interface."
+    # function accumulate!(var0::Array{Float64,1}, var::Array{Float64,1},
+    #         var_w::Float64)
+    #     var[z] += interval*(2.0*(Foc - phiS[1]*w[1]*var0[1])/
+    #         (D_bio[1]*phiS[1]*z_res) + w[1]*Foc)
+    # end # function accumulate!
+    #
+    # "Accumulation of solids within the sediment."
+    # function accumulate!(z::Int, var0::Array{Float64,1}, var::Array{Float64,1})
+    #     var[z] -= interval*APPW[z]*
+    #         ((1.0 - sigma[z])*var0[z] - (1.0 + sigma[z])*var0[z-1])/2.0z_res
+    # end # function accumulate!
+    #
+    # "Accumulation of solids at the bottom of the modelled sediment."
+    # function accumulate!(var0::Array{Float64,1}, var::Array{Float64,1})
+    #     var[ndepths] -= interval*APPW[ndepths]*sigma[ndepths]*
+    #         (var0[ndepths] - var0[ndepths-1])/z_res
+    # end #function accumulate!
 
     "Substitute in above-surface value for solutes."
     function surface!(var0::Array{Float64,1}, var_w::Float64)
@@ -196,13 +191,25 @@ function model(stoptime, interval, saveperXsteps)
         bottom!(var0)
     end # function substitute!
 
-    "Diffusion throughout the sediment."
+    "Reactions throughout the sediment, solutes and solids."
+    function react(rate::Float64)
+        return interval*rate
+    end # function react!
+
+    "Reactions throughout the sediment, solutes and solids."
+    function react!(z::Int, var::Array{Float64,1}, rate::Float64)
+        var[z] += react(rate)
+    end # function react!
+
+
+
+    "Diffusion throughout the sediment, solutes and solidst."
     function diffuse!(z::Int, var0::Array{Float64,1}, var::Array{Float64,1},
             D_var::Float64)
         var[z] += interval*(var0[z-1] - 2.0var0[z] + var0[z+1])*D_var/z_res2
     end # function diffuse!
 
-    "Irrigation of solutes throughout the sediment."
+    "Irrigation of solutes only throughout the sediment."
     function irrigate!(z::Int, var0::Array{Float64,1}, var::Array{Float64,1},
             var_w::Float64)
         var[z] += interval*alpha[z]*(var_w - var0[z])
@@ -224,6 +231,23 @@ function model(stoptime, interval, saveperXsteps)
 
             diffuse!(z, poc0, poc, D_bio[z])
 
+            # Calculate maximum reaction rates based on previous timestep
+            R_poc = -poc0[z]*krefractory[z]
+            R_oxy = R_poc*phiS_phi[z]
+
+            # Check maximum reaction rates are possible after other processes
+            # have acted in this timestep, and correct them if not
+            if oxy[z] + react(R_oxy) < 0.0
+                R_oxy = -oxy[z]/interval
+                R_poc = R_oxy/phiS_phi[z]
+            end # if
+            if poc[z] + react(R_poc) < 0.0
+                R_poc = -poc[z]/interval
+                R_oxy = R_poc*phiS_phi[z]
+            end # if
+
+            react!(z, oxy, R_oxy)
+            react!(z, poc, R_poc)
 
         # # --- Everywhere within the sediment (incl. top and bottom): -----------
         #     # irrigate!(z, oxy0, oxy, oxy_w)
