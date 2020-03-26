@@ -256,24 +256,22 @@ Therefore \eqref{eq:bottom_boundary_condition} is substituted into \eqref{eq:dif
 
 \section{Irrigation}\label{sx:irrigation}
 
-Irrigation only affects the solutes (e.g. \ce{O2}), not the solids (e.g. POC). Its effect is consistent throughout the sediment:
+Irrigation only affects the solutes, not the solids. Its effect varies with depth throughout the sediment:
 \begin{equation}
 I(v_z) = \alpha_z \, (v_w - v_z)
 \end{equation}
-The coefficient $\alpha_z$ ($\code{alpha}$ in a$^{-1}$) at the sediment-water interface (i.e. $\alpha_0$, $\code{alpha\_0}$) is, following \citet{archer_model_2002}:
+where $\alpha_z$ ($\code{alpha}$ in a$^{-1}$) at the sediment-water interface (i.e. where $z = 0$, denoted $\alpha_0$, $\code{alpha\_0}$) is, following \wtf{where does this equation actually come from?}:
 \begin{equation}
 \begin{split}
 \alpha_0 = & 11 \Bigg[ \mathrm{atan} \Bigg( \frac{5 F_c \cdot 10^2 - 400}{400 \pi} \Bigg) + 0.5 \Bigg] - 0.9 \; + \\
 & \frac{20 [\ce{O2}]_w}{[\ce{O2}]_w + 0.01} \cdot \frac{F_c \cdot 10^2}{F_c \cdot 10^2 + 30} \cdot \exp \Bigg(\frac{-[\ce{O2}]_w}{0.01}\Bigg)
 \end{split}
 \end{equation}
-\wtf{Q9: Where do all these magic numbers come from?}
-
 Within the sediment itself:
 \begin{equation}
 \alpha_z = \alpha_0 \exp [-(z/\lambda_i)^2]
 \end{equation}
-where $\lambda_i = 0.05$ m ($\code{lambda\_i}$) is the \wtf{Q10: somewhat mysterious} characteristic depth of \citet{archer_model_2002}.
+where $\lambda_i = 0.05$ m ($\code{lambda\_i}$) is the characteristic depth of \citet{archer_model_2002}. \wtf{Should $\lambda_i$ be easily adjustable by the user?} 
 
 \bibliography{RADI}
 

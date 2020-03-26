@@ -121,17 +121,11 @@ function model(stoptime, interval, saveperXsteps)
     APPW = @. w - delta_D_bio - delta_phiS*D_bio/phiS
     DFF = @. (tort2*delta_phi/phi - delta_tort2)/tort2^2
     # DBF = @. D_bio*(phiS - delta_phi) # not used?
-    TR = @. 2z_res*tort2/dbl
+    # TR = @. 2z_res*tort2/dbl
 
     # Create arrays for saved variables
     oxy_save = fill(NaN, (ndepths-2, nsps))
     poc_save = fill(NaN, (ndepths-2, nsps))
-
-    "Irrigation throughout the sediment."
-    function irrigate!(z::Int, var0::Array{Float64,1}, var::Array{Float64,1},
-            var_w::Float64)
-        var[z] += interval*alpha[z]*(var_w - var0[z])
-    end # function irrigate!
 
     "Reactions throughout the sediment."
     function react!(z::Int, var::Array{Float64,1}, rate::Float64)
@@ -172,11 +166,11 @@ function model(stoptime, interval, saveperXsteps)
 
     "Substitute in above-surface value for solutes."
     function surface!(var0::Array{Float64,1}, var_w::Float64)
-        # Equation following Boudreau (1996, method-of-lines):
-        n = 2 # ambiguous value from Eq. (104)
-        var0[1] = var0[3] + (var_w - var0[2])*2z_res/(dbl*phi[2]^(n+1))
-        # # Or, equation following RADI.m v20:
-        # var0[1] = var0[3] + (var_w - var0[2])*2z_res*tort2[2]/dbl
+        # # Equation following Boudreau (1996, method-of-lines):
+        # n = 2 # ambiguous value from Eq. (104)
+        # var0[1] = var0[3] + (var_w - var0[2])*2z_res/(dbl*phi[2]^(n+1))
+        # Or, equation following RADI-Matlab and CANDI-Fortran:
+        var0[1] = var0[3] + (var_w - var0[2])*2z_res*tort2[2]/dbl
     end # function surface!
 
     "Substitute in above-surface value for solids."
@@ -189,49 +183,48 @@ function model(stoptime, interval, saveperXsteps)
         var0[end] = var0[end-2]
     end # function bottom!
 
-    "Diffusion within the sediments."
+    "Substitute in above-surface and below-bottom values for solutes."
+    function substitute!(var0::Array{Float64,1}, var_w::Float64)
+        surface!(var0, var_w)
+        bottom!(var0)
+    end # function substitute!
+
+    "Substitute in above-surface and below-bottom values for solids."
+    function substitute!(var0::Array{Float64,1}, Fvar::Float64,
+            D_var_0::Float64)
+        surface!(var0, Fvar, D_var_0)
+        bottom!(var0)
+    end # function substitute!
+
+    "Diffusion throughout the sediment."
     function diffuse!(z::Int, var0::Array{Float64,1}, var::Array{Float64,1},
             D_var::Float64)
-        # In MATLAB, there was an extra factor of 2 in here?
         var[z] += interval*(var0[z-1] - 2.0var0[z] + var0[z+1])*D_var/z_res2
     end # function diffuse!
+
+    "Irrigation of solutes throughout the sediment."
+    function irrigate!(z::Int, var0::Array{Float64,1}, var::Array{Float64,1},
+            var_w::Float64)
+        var[z] += interval*alpha[z]*(var_w - var0[z])
+    end # function irrigate!
 
     # ===== Run RADI run: main model loop ======================================
     for t in 1:ntps
         tsave = t in savepoints # i.e. do we save this time?
 
-        # Substitutions above the sediment-water interface
-        surface!(oxy0, oxy_w)
-        surface!(poc0, Foc, D_bio_0)
-
-        # Substitutions below the bottom of the sediment
-        bottom!(oxy0)
-        bottom!(poc0)
+        # Substitutions above and below the modelled sediment column
+        substitute!(oxy0, oxy_w)
+        substitute!(poc0, Foc, D_bio_0)
 
         for z in 2:(ndepths-1)
         # ~~~ BEGIN SEDIMENT PROCESSING ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
             diffuse!(z, oxy0, oxy, D_oxy_tort2[z])
+            irrigate!(z, oxy0, oxy, oxy_w)
+
             diffuse!(z, poc0, poc, D_bio[z])
 
-        # # --- At the sediment-water interface (the top of the sediment): -------
-        #     if z == 2
-        #         diffuse!(oxy0, oxy, D_oxy_tort2[z], oxy_w)
-        #         diffuse!(poc0, poc, D_bio[z], poc0[z])
-        #         # bury!(oxy0, oxy, oxy_w)
-        #         # accumulate!(poc0, poc, )
-        # # --- At the bottom of the modelled sediment: --------------------------
-        #     elseif z == ndepths-1
-        #         diffuse!(oxy0, oxy, D_oxy_tort2[z])
-        #         diffuse!(poc0, poc, D_bio[z])
-        #         # accumulate!(poc0, poc)
-        # # --- Only internally within the sediment (excl. top and bottom): ------
-        #     else
-        #         diffuse!(z, oxy0, oxy, D_oxy_tort2[z])
-        #         diffuse!(z, poc0, poc, D_bio[z])
-        #         # bury!(z, oxy0, oxy, D_oxy)
-        #         # accumulate!(z, poc0, poc)
-        #     end # if
+
         # # --- Everywhere within the sediment (incl. top and bottom): -----------
         #     # irrigate!(z, oxy0, oxy, oxy_w)
         #     # Rg_z = poc[z]*krefractory[z]
@@ -255,11 +248,11 @@ function model(stoptime, interval, saveperXsteps)
             end # if
         end # for z in 2:(ndepths-1)
 
-        # Copy result into "previous step" arrays
-        for z in 1:ndepths
+        # Copy results into "previous step" arrays
+        for z in 2:(ndepths-1)
             oxy0[z] = oxy[z]
             poc0[z] = poc[z]
-        end # for z in 1:ndepths
+        end # for z in 2:(ndepths-1)
     end # for t
     # ===== End of main model loop =============================================
 
