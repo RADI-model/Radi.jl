@@ -13,6 +13,7 @@
 \newcommand{\degC}{\si{\degree}\mathrm{C}}
 \newcommand{\wtf}[1]{\textcolor{Cerulean}{\textbf{#1}}}
 \newcommand{\codenote}[1]{\textcolor{Orange}{\textbf{#1}}}
+\newcommand{\dydx}[2]{\frac{\D{#1}}{\D{#2}}}
 
 \begin{document}
 
@@ -22,10 +23,15 @@
 \maketitle
 
 \begin{abstract}
-RADI.jl is a Julia implementation of RADI: the 1-D Reaction-Advection-Diffusion-Irrigation Diagenetic Sediment Module \wtf{(Q1: is there already a citation for RADI?)}. Here, we define the variables and the equations used in this implementation. So far, only one solute (dissolved oxygen) and one solid (particulate organic carbon) are included and documented here. This document focuses on the mathematics of the model and this specific implementation in Julia. It is not intended to explain the underlying science.
+RADI.jl is a Julia implementation of RADI: the 1-D Reaction-Advection-Diffusion-Irrigation Diagenetic Sediment Module \wtf{(Q1: is there already a citation for RADI?)}.  Here, we define the variables and the equations used in this implementation. So far, only one solute (dissolved oxygen) and one solid (particulate organic carbon) are included and documented here.  This document focuses on the mathematics of the model and this specific implementation in Julia.  It is not intended to explain the underlying science.
 \end{abstract}
 
-\section{Parameters}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%% M O D E L   G R I D %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{Model grid}
 
 \subsection{Time}
 
@@ -37,9 +43,8 @@ Time units are always in years.
 \end{itemize}
 The model therefore runs from time $0$ to $T$ in intervals of $\D{t}$.
 
-\subsection{Sediments and porewaters}
 
-\subsubsection{Structure}
+\subsection{Depth within the sediment}
 
 Depth units are always in metres.
 \begin{itemize}
@@ -49,98 +54,249 @@ Depth units are always in metres.
 \end{itemize}
 The model layers are therefore at depths within the sediment from $0$ to $Z$ in increments of $\D{z}$, where $0$ represents the interface between the surface sediment and overlying seawater.
 
-\subsubsection{Overlying water}
 
-Properties of the overlying water can be set by the user:
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%% P A R A M E T E R S %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{Parameters}
+
+Model parameters are the external drivers of the simulation.  They can either be constant or vary through time, but either way they cannot be affected by the processes operating in the sediment.
+
+
+\subsection{Overlying water}
+
+Properties of the water immediately above the sediment surface:
 
 \begin{itemize}
+  \item $T_\mathrm{w}$ ($\code{T}$ in $\degC$) is the conservative temperature.
+  \item $S_\mathrm{w}$ ($\code{S}$ in g$\cdot$kg$^{-1}$) is the absolute salinity.
+  \item $\rho(\mathrm{w})$ is the seawater density ($\code{rho\_sw}$ in kg$\cdot$m$^{-3}$), calculated from salinity, temperature and pressure using the function $\code{gsw\_rho}$ of \citet{mcdougall_getting_2011}.  \wtf{Currently just using pressure = 1.}
   \item $[\ce{O2}]_w$ ($\code{oxy\_w}$ in $\molmmm$) is the seawater dissolved oxygen concentration.
-  \item $F_c$ ($\code{Foc}$ in mol$\cdot$m$^{-1}\cdot$a$^{-1}$) is the flux of particulate organic carbon arriving at the seafloor.
+  \item $[\ce{PO4}]_w$ ($\code{po4\_w}$ in $\molmmm$) is the seawater total dissolved phosphate concentration.
   \item $\delta$ ($\code{dbl}$ in m) is the diffusive boundary layer thickness.
-  \item $T_w$ ($\code{T}$ in $\degC$) is the water temperature.
 \end{itemize}
 \codenote{Note that $T$ is also used for the total model runtime...}
 
-\subsubsection{Sediment properties}
 
-In the current set-up of RADI.jl, the porosity parameters $\phi_\infty$ and $\phi_0$ are set to 0.74 and 0.85 respectively ($\code{phiInf}$ and $\code{phi0}$, both dimensionless), and $\beta = 33$ m$^{-1}$ ($\code{beta}$). These values were obtained by fitting real data from station 7, mooring 3 of cruise NBP98-2 \citep{sayles_benthic_2001}. \wtf{Q2: Should these ($\phi_0$, $\phi_\infty$ and $\beta$) be inputs that the user can easily adjust?}
+\subsection{Organic matter}
 
-The porosity profile ($\phi$, $\code{phi}$, dimensionless) is parameterised following \citet{boudreau_method--lines_1996}:
+\subsubsection{Stoichiometry}
+
+Particulate organic matter (POM) is assumed to consist of:
+\begin{equation}
+(\ce{CH2O})_{c} (\ce{NH3})_{n} (\ce{H3PO4})_p
+\end{equation}
+which requires $c$ moles of dissolved oxygen (\ce{O2}) to completely degrade into \ce{CO2}, \ce{NH3}, \ce{H3PO4} and \ce{H2O}. \wtf{Should it be possible to use a different C:\ce{O2} ratio here?}
+
+The ``Redfield'' ratios for the stoichiometry of POM are calculated as follows. For carbon ($c$) and phosphorus ($p$), following \citet{galbraith_simple_2015}:
+\begin{equation}
+\code{RC} = c/p = \Bigg( \frac{6.9 \cdot [\ce{PO4}]_w}{\rho(\mathrm{w}) \cdot 10^{-3}} + 6\cdot10^{-3} \Bigg)^{-1}
+\end{equation}
+For nitrogen ($n$) and $p$, following \citet{martiny_strong_2013} at 60 $\si{\degree}$S:
+\begin{equation}
+\code{RN} = n/p = 11
+\end{equation}
+By convention:
+\begin{equation}
+\code{RP} = p = 1
+\end{equation}
+
+
+\subsubsection{Flux of POM to the seafloor}
+
+The total mass flux of POM arriving at the seafloor is $G_\mathrm{T}$ ($\code{Ftot}$ in g$\cdot$m$^{-2}\cdot$a$^{-1}$).
+
+Given the following relative molecular masses:
+\begin{itemize}
+  \item $\code{M\_CH2O}$ = $M(\ce{CH2O})$ = 30.031 g$\cdot$mol$^{-1}$;
+  \item $\code{M\_NH3}$ = $M(\ce{NH3})$ = 17.031 g$\cdot$mol$^{-1}$; and
+  \item $\code{M\_H3PO4}$ = $M(\ce{H3PO4})$ = 97.994 g$\cdot$mol$^{-1}$;
+\end{itemize}
+the molar mass of POM ($M$(POM), $\code{M\_POM}$ in g$\cdot$mol$^{-1}$) is therefore:
+\begin{equation}
+\code{M\_POM} = M(\mathrm{POM}) = c M(\ce{CH2O}) + n M(\ce{NH3}) + p M(\ce{H3PO4})
+\end{equation}
+
+The molar flux of POM to the seafloor ($F_\mathrm{T}$, $\code{Ftot\_mol}$ in mol$\cdot$m$^{-2}\cdot$a$^{-1}$) is:
+\begin{equation}
+\code{Ftot\_mol} = F_\mathrm{T} = \frac{G_\mathrm{T}}{M(\mathrm{POM})}
+\end{equation}
+and the molar particulate organic carbon (POC) flux ($F_c$, $\code{Foc}$ in mol$\cdot$m$^{-2}\cdot$a$^{-1}$):
+\begin{equation}
+\code{Foc} = F_c = c F_\mathrm{T}
+\end{equation}
+
+
+\subsection{Porosity and tortuosity}
+
+In the current set-up of RADI.jl, the porosity parameters $\phi_\infty$ and $\phi_0$ are set to 0.74 and 0.85 respectively ($\code{phiInf}$ and $\code{phi0}$, both dimensionless), and $\beta = 33$ m$^{-1}$ ($\code{beta}$).  These values were obtained by fitting real data from station 7, mooring 3 of cruise NBP98-2 \citep{sayles_benthic_2001}.
+
+The porosity ($\phi_z$, $\code{phi}$, dimensionless) is parameterised following \citet{boudreau_method--lines_1996}:
 \begin{equation}\label{phi}
-\phi = \phi_\infty + (\phi_0 - \phi_\infty) \exp(-\beta z)
+\code{phi} = \phi_z = \phi_\infty + (\phi_0 - \phi_\infty) \exp(-\beta z)
 \end{equation}
-The corresponding ``solid porosity'' ($\phi_s$, $\code{phiS}$, dimensionless) is:
+The corresponding ``solid porosity'' ($\phi_{s,z}$, $\code{phiS}$, dimensionless) is:
 \begin{equation}\label{phiS}
-\phi_s = 1 - \phi
+\code{phiS} = \phi_{s,z} = 1 - \phi_z
 \end{equation}
-RADI.jl also uses the related convenience variable $\code{phiS\_phi} = \phi_s/\phi$.
+RADI.jl also uses the related convenience variable $\code{phiS\_phi} = \phi_{s,z}/\phi_z$.
 
-Following \citet{boudreau_diffusive_1996}, the sediment tortuosity ($\theta$, $\code{tort}$, dimensionless) is:
-\begin{equation}\label{tort}
-\theta^2 = 1 - 2 \log \phi
+The derivatives of the porosities with respect to $z$ are:
+\begin{equation}
+\code{delta\_phi} = \frac{\D{\phi_z}}{\D{z}} = -\beta (\phi_0 - \phi_\infty) \exp (-\beta z)
 \end{equation}
-RADI.jl also uses the related convenience variable $\code{tort2} = \theta^2$.
+\begin{equation}
+\code{delta\_phiS} = \frac{\D{\phi_{s,z}}}{\D{z}} = -\frac{\D{\phi_z}}{\D{z}}
+\end{equation}
+
+Following \citet{boudreau_diffusive_1996}, the sediment tortuosity ($\theta_z^2 = \code{tort2}$, $\theta_z = \code{tort}$, dimensionless) is:
+\begin{equation}\label{tort}
+\code{tort2} = \theta_z^2 = 1 - 2 \log \phi_z
+\end{equation}
+Its derivative with respect to $z$ is:
+\begin{equation}
+\code{delta\_tort2i} = \frac{\D{(1 / \theta_z^2)}}{\D{z}} = \frac{2 \D{\phi_z}/\D{z}}{\phi_z \theta_z^4}
+\end{equation}
+
+
+\subsection{Bioturbation}
 
 Following \citet{archer_model_2002}, the surface sediment bioturbation coefficient $b_0$ ($\code{D\_bio\_0}$ in m$^2\cdot$a$^{-1}$) is:
 \begin{equation}\label{D_bio_0}
-b_0 = (0.0232 \cdot 10^{-4}) (F_c \cdot 10^2)^{\,0.85}
+\code{D\_bio\_0} = b_0 = (0.0232 \cdot 10^{-4}) (F_c \cdot 10^2)^{\,0.85}
 \end{equation}
 \wtf{Q3: Eq. \eqref{D_bio_0}: where do the $10^{-4}$ and $10^2$ multipliers come from? Are they just unit conversions?}
 
 The bioturbation coefficient propagates down through the sediment as $b_z$ ($\code{D\_bio}$ in m$^2\cdot$a$^{-1}$):
 \begin{equation}\label{B_z}
-b_z = b_0 \exp(-[z/\lambda_b]^2) \cdot \frac{[\ce{O2}]_w}{[\ce{O2}]_w + 0.02 \, \molmmm}
+\code{D\_bio} = b_z = b_0 \exp(-[z/\lambda_b]^2) \cdot \frac{[\ce{O2}]_w}{[\ce{O2}]_w + 0.02 \cdot \molmmm}
 \end{equation}
-where $\lambda_b$ ($\code{lambda\_b}$ in m) is the characteristic depth of 0.08 m, following \citet{sayles_benthic_2001}. \wtf{Q4: Where does the magic 0.02 number come from?}
+where $\lambda_b$ ($\code{lambda\_b}$ in m) is the characteristic depth of 0.08 m, following \citet{sayles_benthic_2001}.  \wtf{Q4: Where does the magic 0.02 number come from?}
 
-We also require the differentials of each of $\phi$, $\phi_s$, $\theta^2$ and $b_z$ with respect to $z$, which are calculated as follows:
+Its derivative with respect to $z$ is:
 \begin{equation}
-\frac{\D{\phi}}{\D{z}} = -\beta (\phi_0 - \phi_\infty) \exp (-\beta z)
-\end{equation}
-
-\begin{equation}
-\frac{\D{\phi_s}}{\D{z}} = \beta (\phi_0 - \phi_\infty) \exp (-\beta z)
+\code{delta\_D\_bio} = \frac{\D{b_z}}{\D{z}} = - \frac{2 z b_z}{\lambda_b^2}
 \end{equation}
 
-\begin{equation}
-\frac{\D{(\theta^2)}}{\D{z}} = \frac{2 \beta (\phi_0 - \phi_\infty)}{\phi_0 + \phi_\infty [\exp(\beta z) - 1]}
+
+\subsubsection{Organic matter degradation}
+
+The rate constant $k_z$ for organic matter degradation ($\code{krefractory}$ in a$^{-1}$) is \citep{archer_model_2002}:
+\begin{equation}\label{k_poc_degradation}
+\code{krefractory} = k_z = 80.25 \, b_0 \exp(-z)
 \end{equation}
 
+
+\subsection{Advection through burial}
+
+The bulk burial velocity at the sediment-water interface ($x_0$, $\code{x0}$ in m$\cdot$a$^{-1}$) is:
 \begin{equation}
-\frac{\D{b_z}}{\D{z}} = - \frac{2 z b_0}{\lambda_b^2} \exp(-[z/\lambda_b]^2) \cdot \frac{[\ce{O2}]_w}{[\ce{O2}]_w + 0.02 \, \molmmm}
+\code{x0} = x_0 = \frac{G_\mathrm{T}}{\rho(\mathrm{POM}) \cdot \phi_{s, 0}}
 \end{equation}
-In RADI.jl, these are $\code{delta\_phi}$, $\code{delta\_phiS}$, $\code{delta\_tort2}$ and $\code{delta\_D\_bio}$ respectively.
+where $\rho(\mathrm{POM}) = 2.65\cdot10^6\cdot$g$\cdot$m$^{-3}$ ($\code{rho\_pom}$) is the density of particulate organic matter (POM).  The bulk burial velocity at ``infinite'' depth in the sediment ($x_\infty$, $\code{xinf}$ in m$\cdot$a$^{-1}$) is:
+\begin{equation}
+\code{xinf} = x_\infty = x_0 \phi_{s,0} / \phi_{s,Z}
+\end{equation}
+
+The porewater burial velocity ($u_z$, $\code{u}$ in m$\cdot$a$^{-1}$) is therefore:
+\begin{equation}
+\code{u} = u_z = x_\infty \phi_Z / \phi_z
+\end{equation}
+and the solid burial velocity ($w_z$, $\code{w}$ in m$\cdot$a$^{-1}$) is:
+\begin{equation}
+\code{w} = w_z = x_\infty \phi_{s,Z} / \phi_{s,z}
+\end{equation}
+
+$P_{e_\mathrm{h}, z}$ ($\code{Peh}$) is one-half of the cell Peclet number, following \citet{boudreau_method--lines_1996}:
+\begin{equation}
+\code{Peh} = P_{e_\mathrm{h}, z} = w_z \D{z} / (2 b_z)
+\end{equation}
+where $\sigma_z$ ($\code{sigma}$) is:
+\begin{equation}
+\code{sigma} = \sigma_z = 1 / \mathrm{tanh}(P_{e_\mathrm{h}, z}) - 1 / P_{e_\mathrm{h}, z}
+\end{equation}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% V A R I A B L E S %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \section{Variables}
+
+Model variables are the results of the simulation.  Their values cannot be directly controlled, but rather emerge from the modelled parameters and processes.
+
+There are two arrays for each variable in RADI.jl. In general, the values of the variable at the current timestep are $\code{var}$, while the values from the previous timestep are stored as $\code{var0}$.
+
 
 \subsection{Porewater solutes}
 
 Within the sediment porewaters:
 \begin{itemize}
-  \item $[\ce{O2}]$ (\code{oxy} in $\molmmm$) is the dissolved oxygen concentration.
+  \item $[\ce{O2}]$ (\code{oxy}, \code{oxy0} in $\molmmm$) is the dissolved oxygen concentration.
 \end{itemize}
+
 
 \subsection{Solids}
 
 Within the sediment itself:
 \begin{itemize}
-  \item $[$POC$]$ (\code{poc} in $\molmmm$) is the particulate organic carbon concentration.
+  \item $[$POC$]$ (\code{poc}, \code{poc0} in $\molmmm$) is the particulate organic carbon concentration.
 \end{itemize}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%% M A S T E R   E Q U A T I O N %%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \section{Master equation}
 
 For each modelled variable $v$ at time $t$ and depth $z$:
 \begin{equation}
-v_{(t+\D{t}), z} = v_{t,z} + [R(v_{t,z}) + A(v_{t,z}) + D(v_{t,z}) + I(v_{t,z})] \cdot \D{t}
+v_{(t+\D{t}), z} = v_{t,z} + [R_{t,z}(v) + A_{t,z}(v) + D_{t,z}(v) + I_{t,z}(v)] \cdot \D{t}
 \end{equation}
 where:
 \begin{itemize}
-  \item $R(v_{t,z})$ quantifies the rate of change of $v_{t,z}$ due to \textbf{reactions} (section \ref{sx:reaction}).
-  \item $A(v_{t,z})$ quantifies the rate of change of $v_{t,z}$ due to \textbf{advection} (section \ref{sx:advection}).
-  \item $D(v_{t,z})$ quantifies the rate of change of $v_{t,z}$ due to \textbf{diffusion} (section \ref{sx:diffusion}).
-  \item $I(v_{t,z})$ quantifies the rate of change of $v_{t,z}$ due to \textbf{irrigation} (section \ref{sx:irrigation}).
+  \item $R_{t,z}(v)$ quantifies the rate of change of $v_{t,z}$ due to \textbf{reactions} (section \ref{sx:reaction}).
+  \item $A_{t,z}(v)$ quantifies the rate of change of $v_{t,z}$ due to \textbf{advection} (section \ref{sx:advection}).
+  \item $D_{t,z}(v)$ quantifies the rate of change of $v_{t,z}$ due to \textbf{diffusion} (section \ref{sx:diffusion}).
+  \item $I_{t,z}(v)$ quantifies the rate of change of $v_{t,z}$ due to \textbf{irrigation} (section \ref{sx:irrigation}).
 \end{itemize}
-In the subsequent sections, only the subscript $z$'s are explicitly written out; the $t$'s are excluded, for clarity.
+In general, only the subscript $z$s are explicitly written out in this document.  The $t$s are implicit but excluded for clarity.
+
+
+\subsection{Above and below the modelled sediment}
+
+Advection and diffusion processes require values for each model variable not only at the depth being modelled ($z$) but also in the layers above and below ($z - \D{z}$ and $z + \D{z}$).  These values exist within the sediment (i.e. $0 < z < Z$) but not at its extremes.  At the sediment-water interface ($z = 0$) we require a value for the variable at $z = -\D{z}$, effectively within the overlying water.  At the very bottom of the modelled sediment ($z = Z$) we require a value for the next layer down, at $z = Z + \D{z}$.
+
+Effective values of each variable in these ``next layers'' just beyond the modelled domain are calculated following \citet{boudreau_method--lines_1996}.  These effective values can then be used to calculate the effects of advection and diffusion in the top and bottom layers using exactly the same equations as within the sediment itself.
+
+
+\subsubsection{Above the sediment-water interface}
+
+Following \citet{boudreau_method--lines_1996} \wtf{(or is there a better reference given this is not actually the equation from that paper?)}, we calculate advection and diffusion at $z = 0$ using following substitutions for solutes:
+% Equation used in model, following CANDI code but different from Boudreau:
+\begin{equation}\label{Dv0}
+v_{(-\D{z})} = v_{\D{z}} + \frac{2 \theta_z^2 \D{z}}{\delta} (v_\mathrm{w} - v_0)
+\end{equation}
+% Actual equation from Boudreau:
+% \begin{equation}\label{Dv0}
+% v_{(-\D{z})} = v_{\D{z}} + \frac{2 \D{z}}{\delta \phi_0^{(n+1)}} (v_\mathrm{w} - v_0)
+% \end{equation}
+and for solids:
+\begin{equation}
+v_{(-\D{z})} = v_{\D{z}} + \frac{2 \D{z}}{b_0} \Bigg( \frac{F_v}{\phi_{s, 0}} - w_0 v_0 \Bigg)
+\end{equation}
+
+
+\subsubsection{Below the bottom of the modelled sediment}
+
+At sediment depth $z = Z$ only, $v_{(Z+\D{z})}$ falls outside the depth range of the model.  However, the model has a boundary condition demanding that the slope of each variable with respect to $z$ is zero at the bottom of the modelled domain.  This dictates that:
+\begin{equation}\label{eq:bottom_boundary_condition}
+v_{(Z+\D{z})} = v_{(Z-\D{z})}
+\end{equation}
+Therefore \eqref{eq:bottom_boundary_condition} is used to calculate advection and diffusion at $z = Z$ for both solutes and solids.
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% R E A C T I O N %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -148,76 +304,74 @@ In the subsequent sections, only the subscript $z$'s are explicitly written out;
 
 \section{Reaction}\label{sx:reaction}
 
-Biogeochemical reactions operate on solutes and solids throughout the entire sediment column, including the very top and bottom layers. $R(v_t)$ is the net rate at which $v$ is being consumed (negative $R$) or created (positive $R$) by these reactions.
+Biogeochemical reactions operate on solutes and solids throughout the entire sediment column, including the very top and bottom layers.  $R_z(v)$ is the net rate at which $v$ is being consumed (negative $R_z$) or created (positive $R_z$) by these reactions.
+
 
 \subsection{Organic matter degradation}
 
 Organic matter degradation affects dissolved oxygen and particulate organic carbon:
 \begin{equation}
-R(\mathrm{POC}) = -k_z [\mathrm{POC}]
+\code{R\_poc} = R_z(\mathrm{POC}) = -k_z [\mathrm{POC}]_z
 \end{equation}
 \begin{equation}\label{r_O2}
-R(\ce{O2}) = r(\mathrm{POC}) \cdot \phi_s / \phi
+\code{R\_oxy} = R_z(\ce{O2}) = R_z(\mathrm{POC}) \cdot \phi_{s,z} / \phi_z
 \end{equation}
-where the rate constant $k_z$ for organic matter degradation ($\code{krefractory}$ in a$^{-1}$) is \citep{archer_model_2002}:
-\begin{equation}\label{k_poc_degradation}
-k_z = 80.25 \, b_0 \exp(-z)
-\end{equation}
-\wtf{Eq. \eqref{r_O2}: should there not be a photosynthetic quotient (C:O$_2$ ratio) in here?}
 
-After the reaction rates have been calculated, \codenote{there is a check that they don't make any of the concentrations negative...}
+
+\subsubsection{Validity check}
+
+The losses of \ce{O2} and POC through organic matter degradation are coupled, so if one of these variables is exhausted then the other can no longer be used up.  The initial calculations of the $R_z$ values therefore represent the maximum possible changes.  At each timestep, we test whether these are possible in the following sequence:
+\begin{equation}\label{eq:om-o2loss-check}
+[\ce{O2}]_{(t+\D{t}, z)} + R_{t,z}(\ce{O2}) \cdot \D{t} < 0
+\end{equation}
+Note that the \ce{O2} concentration tested is from the current (new) timepoint, after adding the effects of advection, diffusion, and irrigation, but before adding the reaction.
+
+If equality \eqref{eq:om-o2loss-check} is true, then the values of $R_{t,z}(\ce{O2})$ and $R_{t,z}(\mathrm{POC})$ are sequentially updated as follows:
+\begin{equation}
+R_{t,z}(\ce{O2}) = -[\ce{O2}]_{(t+\D{t}, z)} / \D{t}
+\end{equation}
+\begin{equation}
+R_{t,z}(\mathrm{POC}) = R_{t,z}(\ce{O2}) \cdot \phi_{t,z} / \phi_{s,t,z}
+\end{equation}
+
+Next, the validity of the current value of $R_{t,z}(\mathrm{POC})$ is tested:
+\begin{equation}\label{eq:om-pocloss-check}
+[\mathrm{POC}]_{(t+\D{t}, z)} + R_{t,z}(\mathrm{POC}) \cdot \D{t} < 0
+\end{equation}
+If equality \eqref{eq:om-pocloss-check} is true, then the values of $R_{t,z}(\mathrm{POC})$ is updated as follows:
+\begin{equation}
+R_{t,z}(\mathrm{POC}) = -[\mathrm{POC}]_{(t+\D{t}, z)} / \D{t}
+\end{equation}
+and finally $R_{t,z}(\ce{O2})$ is updated with \eqref{r_O2}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%% A D V E C T I O N %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\section{Advection}\label{sx:advection}.
+\section{Advection}\label{sx:advection}
 
-Advection is modelled differently (1) at the sediment-water interface (i.e. where $z = 0$), (2) within the sediment ($0 < z < Z$), and (3) at the bottom of the sediment ($z = Z$).
+Advection is modelled differently for solutes and solids.
 
-\subsection{Advection at the sediment-water interface}\label{sx:adv_swi}
 
-At sediment depth $z = 0$ only, for solutes (e.g. $\ce{O2}$):
+\subsection{Advection of solutes}
+
+At sediment depth $z$, for solutes (e.g. $\ce{O2}$):
 \begin{equation}
-A(v_0) = u_0 (v_w - v_0) \theta^2 / \delta
+A_z(v) = -\Bigg( u_z - \frac{d_z(v)}{\phi_z} \cdot \dydx{\phi_z}{z} - d^\circ(v) \cdot \dydx{(1/\theta_z^2)}{z} \Bigg) \cdot \frac{v_{(z+\D{z})} - v_{(z-\D{z})}}{2\D{z}}
 \end{equation}
-and for solids (e.g. POC):
-\begin{equation}
-A(v_0) = w_0 (F_c - \phi_s w_0 v_0) / (B_0 \phi_s)
-\end{equation}
+% -[u_z - (\theta^2 \D{\phi} / \phi - \D{\{\theta^2\}}) d(v_z) / \theta^2] [v_{(z+\D{z})} - v_{(z-\D{z})}] / 2 \D{z}
 
-\subsection{Advection within the sediment}
 
-At sediment depth $z$, where $0 < z < Z$, for solutes (e.g. $\ce{O2}$):
-\begin{equation}
-A(v_z) = -[u_z - (\theta^2 \D{\phi} / \phi - \D{\{\theta^2\}}) d(v_z) / \theta^2] [v_{(z+\D{z})} - v_{(z-\D{z})}] / 2 \D{z}
-\end{equation}
-where $d(v_z)$ is the relevant diffusion coefficient given in section \ref{sx:diffusion}.
+\subsection{Advection of solids}
 
 For solids (e.g. POC):
 \begin{equation}
-\begin{split}
-A(v_z) = & -[(1 - \sigma_z) v_{(z+\D{z})} + 2 \sigma_z v_z - (1 + \sigma_z) v_{(z-\D{z})}] \cdot \\
-& [w_z - \D{B_z} - \D{\phi_s} B_z / \phi_s] / 2 \D{z}
-\end{split}
+A_z(v) = -\Bigg( w_z - \dydx{b_z}{z} - \frac{b_z}{\phi_{s,z}} \cdot \dydx{\phi_{s,z}}{z} \Bigg) \cdot \frac{(1 - \sigma_z) v_{(z+\D{z})} + 2 \sigma_z v_z - (1 + \sigma_z) v_{(z-\D{z})}}{2\D{z}}
 \end{equation}
-where $\sigma_z$ ($\code{sigma}$) is given by:
-\begin{equation}
-\sigma_z = 1 / \mathrm{tanh}(P_{e_h}) - 1 / P_{e_h}
-\end{equation}
-in which $P_{e_h}$ ($\code{Peh}$) is:
-\begin{equation}
-P_{e_h} = w_z \D{z} / (2 B_z)
-\end{equation}
-
-\subsection{Advection at the bottom of the sediment}\label{sx:adv_bot}
-
-Solutes (e.g. \ce{O2}) are not affected by advection at the bottom of the sediment.
-
-At sediment depth $z = Z$ only, and for solids only (e.g. POC):
-\begin{equation}
-A(v_Z) = -(w_Z - \D{B_Z} - \D{\phi_s} B_Z / \phi_s) (v_Z - v_{(Z-\D{z})}) \sigma_Z / \D{z}
-\end{equation}
+% \begin{split}
+% A(v_z) = & -[(1 - \sigma_z) v_{(z+\D{z})} + 2 \sigma_z v_z - (1 + \sigma_z) v_{(z-\D{z})}] \cdot \\
+% & [w_z - \D{B_z} - \D{\phi_s} B_z / \phi_s] / 2 \D{z}
+% \end{split}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%% D I F F U S I O N %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -228,6 +382,7 @@ A(v_Z) = -(w_Z - \D{B_Z} - \D{\phi_s} B_Z / \phi_s) (v_Z - v_{(Z-\D{z})}) \sigma
 \subsection{Effective diffusion coefficients}
 
 Diffusion is controlled by each variable's effective diffusion coefficient, which varies with depth in the sediment (generically denoted $d_z(v)$ for variable $v$, $\code{D\_var}$, always in m$^2\cdot$a$^{-1}$).
+
 
 \subsubsection{Effective diffusion coefficients for solutes}
 
@@ -241,12 +396,14 @@ The $d^\circ(v)$ can be converted into the $d_z(v)$ required by RADI following \
 d_z(v) = \frac{d^\circ(v)}{(\theta_z)^2}
 \end{equation}
 
+
 \subsubsection{Effective diffusion coefficients for solids}
 
 For particulate organic carbon:
 \begin{equation}
 d_z(\mathrm{POC}) = b_z
 \end{equation}
+
 
 \subsection{Diffusion within the sediment}
 
@@ -256,24 +413,6 @@ D(v_z) = d_z(v) \cdot \big( v_{(z-\D{z})} - 2 v_z + v_{(z+\D{z})} \big) / (\D{z}
 \end{equation}
 where $d_z(v)$ is the relevant diffusion coefficient.
 
-\subsection{Diffusion at the sediment-water interface}\label{sx:diffusion_surface}
-
-At sediment depth $z = 0$ only, $v_{(z-\D{z})} = v_{(-\D{z})}$ is invalid as it represents a value in the water above the sediment surface. We therefore calculate diffusion at $z = 0$ using \eqref{eq:diffusion} after making the following substitutions for solutes:
-\begin{equation}\label{Dv0}
-v_{(-\D{z})} = v_{\D{z}} + \frac{2 \D{z}}{\delta \phi_0^{(n+1)}} (v_\mathrm{w} - v_0)
-\end{equation}
-and for solids:
-\begin{equation}
-v_{(-\D{z})} = v_{\D{z}} + \frac{2 \D{z}}{b_0} \Bigg( \frac{F_v}{\phi_{s, 0}} - w_0 v_0 \Bigg)
-\end{equation}
-
-\subsection{Diffusion at the bottom of the sediment}\label{sx:diffusion_bottom}
-
-At sediment depth $z = Z$ only, $v_{(Z+\D{z})}$ falls outside the depth range of the model. However, the model's boundary condition of zero gradients at the bottom dictates that:
-\begin{equation}\label{eq:bottom_boundary_condition}
-v_{(Z+\D{z})} = v_{(Z-\D{z})}
-\end{equation}
-Therefore \eqref{eq:bottom_boundary_condition} is substituted into \eqref{eq:diffusion} to calculate diffusion at $z = Z$ for both solutes and solids.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%% I R R I G A T I O N %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -297,6 +436,7 @@ Within the sediment itself:
 \alpha_z = \alpha_0 \exp [-(z/\lambda_i)^2]
 \end{equation}
 where $\lambda_i = 0.05$ m ($\code{lambda\_i}$) is the characteristic depth of \citet{archer_model_2002}. \wtf{Should $\lambda_i$ be easily adjustable by the user?}
+
 
 \bibliography{RADI}
 
