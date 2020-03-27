@@ -251,20 +251,23 @@ for t in 1:ntps
     @simd for z in 2:(ndepths-1)
     # ~~~ BEGIN SEDIMENT PROCESSING ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-        # First, do all the physical processes
+        # --- First, do all the physical processes -----------------------------
+        # Dissolved oxygen (solute)
         advect!(z, oxy0, oxy, D_oxy_tort2[z])
         diffuse!(z, oxy0, oxy, D_oxy_tort2[z])
         irrigate!(z, oxy0, oxy, oxy_w)
 
+        # Particulate organic carbon (solid)
         advect!(z, poc0, poc)
         diffuse!(z, poc0, poc, D_bio[z])
 
+        # --- Now do the reactions! --------------------------------------------
         # Calculate maximum reaction rates based on previous timestep
         R_poc::Float64 = -poc0[z]*krefractory[z]
         R_oxy::Float64 = R_poc*phiS_phi[z]
 
-        # Check maximum reaction rates are possible after other processes
-        # have acted in this timestep, and correct them if not
+        # Check maximum reaction rates are possible after other processes have
+        # acted in this timestep, and correct them if not
         if oxy[z] + react(R_oxy) < 0.0
             R_oxy = -oxy[z]/interval
             R_poc = R_oxy/phiS_phi[z]
@@ -274,11 +277,10 @@ for t in 1:ntps
             R_oxy = R_poc*phiS_phi[z]
         end # if
 
-        # Now do the reactions!
         react!(z, oxy, R_oxy)
         react!(z, poc, R_poc)
-    # ~~~ END SEDIMENT PROCESSING ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+    # ~~~ END SEDIMENT PROCESSING ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         # Save output if we are at a savepoint
         if tsave
             if t == 1
@@ -294,7 +296,6 @@ for t in 1:ntps
             end # if
         end # if
     end # for z in 2:(ndepths-1)
-
     # Copy results into "previous step" arrays
     @simd for z in 2:(ndepths-1)
         oxy0[z] = oxy[z]
