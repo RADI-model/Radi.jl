@@ -248,7 +248,7 @@ for t in 1:ntps
     substitute!(oxy0, oxy_w)
     substitute!(poc0)
 
-    for z in 2:(ndepths-1)
+    @simd for z in 2:(ndepths-1)
     # ~~~ BEGIN SEDIMENT PROCESSING ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
         # First, do all the physical processes
@@ -296,7 +296,7 @@ for t in 1:ntps
     end # for z in 2:(ndepths-1)
 
     # Copy results into "previous step" arrays
-    for z in 2:(ndepths-1)
+    @simd for z in 2:(ndepths-1)
         oxy0[z] = oxy[z]
         poc0[z] = poc[z]
     end # for z in 2:(ndepths-1)
