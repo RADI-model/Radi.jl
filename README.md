@@ -4,6 +4,8 @@
 
 ## Instructions
 
+Note that the current running instructions are still very much a temporary bodge job!
+
 ```julia
 # This sets things up and runs the model from initial constant conditions:
 julia> include("testing.jl")
