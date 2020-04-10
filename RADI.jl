@@ -218,8 +218,8 @@ end # function react!
 "Advection for solutes."
 function advect!(z::Int, var0::Array{Float64,1}, var::Array{Float64,1},
         D_var::Float64)
-    var[z] += -interval*(u[z] - D_var/phi[z] - D_var*delta_tort2_tort2[z])*
-        (var0[z+1] - var0[z-1])/(2.0z_res)
+    var[z] += -interval*(u[z] - delta_phi[z]*D_var/phi[z] -
+        D_var*delta_tort2_tort2[z])*(var0[z+1] - var0[z-1])/(2.0z_res)
 end # function advect!
 
 "Advection for solids."
