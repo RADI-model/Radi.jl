@@ -23,7 +23,7 @@
 \maketitle
 
 \begin{abstract}
-RADI.jl is a Julia implementation of RADI: the 1-D Reaction-Advection-Diffusion-Irrigation Diagenetic Sediment Module \wtf{(Q1: is there already a citation for RADI?)}.  Here, we define the variables and the equations used in this implementation. So far, only one solute (dissolved oxygen) and one solid (particulate organic carbon) are included and documented here.  This document focuses on the mathematics of the model and this specific implementation in Julia.  It is not intended to explain the underlying science.
+RADI.jl is a Julia implementation of RADI: the 1-D Reaction-Advection-Diffusion-Irrigation Diagenetic Sediment Module.  Here, we define the variables and the equations used in this implementation. So far, only one solute (dissolved oxygen) and one solid (particulate organic carbon) are included and documented here.  This document focuses on the mathematics of the model and this specific implementation in Julia.  It is not intended to explain the underlying science.
 \end{abstract}
 
 
@@ -87,7 +87,7 @@ Particulate organic matter (POM) is assumed to consist of:
 \begin{equation}
 (\ce{CH2O})_{c} (\ce{NH3})_{n} (\ce{H3PO4})_p
 \end{equation}
-which requires $c$ moles of dissolved oxygen (\ce{O2}) to completely degrade into \ce{CO2}, \ce{NH3}, \ce{H3PO4} and \ce{H2O}. \wtf{Should it be possible to use a different C:\ce{O2} ratio here?}
+which requires $c$ moles of dissolved oxygen (\ce{O2}) to completely degrade into \ce{CO2}, \ce{NH3}, \ce{H3PO4} and \ce{H2O}. \codenote{In the future it should be possible to use a different C:\ce{O2} ratio here.}
 
 The ``Redfield'' ratios for the stoichiometry of POM are calculated as follows. For carbon ($c$) and phosphorus ($p$), following \citet{galbraith_simple_2015}:
 \begin{equation}
@@ -166,13 +166,12 @@ Following \citet{archer_model_2002}, the surface sediment bioturbation coefficie
 \begin{equation}\label{D_bio_0}
 \code{D\_bio\_0} = b_0 = (0.0232 \cdot 10^{-4}) (F_c \cdot 10^2)^{\,0.85}
 \end{equation}
-\wtf{Q3: Eq. \eqref{D_bio_0}: where do the $10^{-4}$ and $10^2$ multipliers come from? Are they just unit conversions?}
 
 The bioturbation coefficient propagates down through the sediment as $b_z$ ($\code{D\_bio}$ in m$^2\cdot$a$^{-1}$):
 \begin{equation}\label{B_z}
 \code{D\_bio} = b_z = b_0 \exp(-[z/\lambda_b]^2) \cdot \frac{[\ce{O2}]_w}{[\ce{O2}]_w + 0.02 \cdot \molmmm}
 \end{equation}
-where $\lambda_b$ ($\code{lambda\_b}$ in m) is the characteristic depth of 0.08 m, following \citet{sayles_benthic_2001}.  \wtf{Q4: Where does the magic 0.02 number come from?}
+where $\lambda_b$ ($\code{lambda\_b}$ in m) is the characteristic depth of 0.08 m, following \citet{sayles_benthic_2001}.  \codenote{The magic 0.02 number comes from \citet{archer_model_2002}, it is the "half-saturation constant" for oxygen (i.e. the concentration needed for bioturbators to act at half their maximum speed).}
 
 Its derivative with respect to $z$ is:
 \begin{equation}
@@ -274,7 +273,7 @@ Effective values of each variable in these ``next layers'' just beyond the model
 
 \subsubsection{Above the sediment-water interface}
 
-Following \citet{boudreau_method--lines_1996} \wtf{(or is there a better reference given this is not actually the equation from that paper?)}, we calculate advection and diffusion at $z = 0$ using following substitutions for solutes:
+Following \citet{boudreau_method--lines_1996}, we calculate advection and diffusion at $z = 0$ using following substitutions for solutes:
 % Equation used in model, following CANDI code but different from Boudreau:
 \begin{equation}\label{Dv0}
 v_{(-\D{z})} = v_{\D{z}} + \frac{2 \theta_z^2 \D{z}}{\delta} (v_\mathrm{w} - v_0)
@@ -435,7 +434,7 @@ Within the sediment itself:
 \begin{equation}
 \alpha_z = \alpha_0 \exp [-(z/\lambda_i)^2]
 \end{equation}
-where $\lambda_i = 0.05$ m ($\code{lambda\_i}$) is the characteristic depth of \citet{archer_model_2002}. \wtf{Should $\lambda_i$ be easily adjustable by the user?}
+where $\lambda_i = 0.05$ m ($\code{lambda\_i}$) is the characteristic depth of \citet{archer_model_2002}. \codenote{The value of $\lambda_i$ should be easily adjustable by the user.}
 
 
 \bibliography{RADI}
