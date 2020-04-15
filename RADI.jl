@@ -120,10 +120,12 @@ phiS_phi::Array{Float64,1} = phiS./phi
 tort2::Array{Float64,1} = @. 1.0 - 2.0log(phi)
 # ^tortuosity squared from Boudreau (1996, GCA)
 # tort::Array{Float64,1} = sqrt.(tort2) # tortuosity
-delta_phi::Array{Float64,1} = @. -beta*(phi0 - phiInf)*exp(-beta*depths)
+delta_phi::Array{Float64,1} = @. -z_res*beta*(phi0 - phiInf)*exp(-beta*depths)
+delta_phi[2] = 0.0 # are we sure about this?
 delta_phiS::Array{Float64,1} = -delta_phi
 delta_tort2i::Array{Float64,1} = @. 2.0delta_phi/(phi*tort2^2)
 delta_tort2_tort2::Array{Float64,1} = delta_tort2i.*tort2
+println(delta_tort2_tort2)
 
 # Bioturbation (for solids)
 D_bio_0::Float64 = @. 0.0232e-4*(1e2Foc)^0.85
@@ -253,17 +255,17 @@ for t in 1:ntps
 
         # --- First, do all the physical processes -----------------------------
         # Dissolved oxygen (solute)
-        diffuse!(z, oxy0, oxy, D_oxy_tort2[z])
         advect!(z, oxy0, oxy, D_oxy_tort2[z])
+        if (t == 1) && (z == 2)
+            println("advective O2 term at top:")
+            println(oxy[z] - oxy0[z])
+        end # if
+        diffuse!(z, oxy0, oxy, D_oxy_tort2[z])
         irrigate!(z, oxy0, oxy, oxy_w)
 
         # Particulate organic carbon (solid)
-        diffuse!(z, poc0, poc, D_bio[z])
-        if (t == 1) && (z == 2)
-            println("diffusive OC term at top:")
-            println(poc[z] - poc0[z])
-        end # if
         advect!(z, poc0, poc)
+        diffuse!(z, poc0, poc, D_bio[z])
 
         # --- Now do the reactions! --------------------------------------------
         # Calculate maximum reaction rates based on previous timestep
