@@ -122,7 +122,7 @@ phiS_phi::Array{Float64,1} = phiS./phi
 tort2::Array{Float64,1} = @. 1.0 - 2.0log(phi)
 # ^tortuosity squared from Boudreau (1996, GCA)
 delta_phi::Array{Float64,1} = @. -beta*(phi0 - phiInf)*exp(-beta*depths)
-delta_phi[2] = 0.0 # are we sure about this?
+# delta_phi[2] = 0.0 # don't do this
 delta_phiS::Array{Float64,1} = -delta_phi
 delta_tort2i::Array{Float64,1} = @. 2.0delta_phi/(phi*tort2^2)
 delta_tort2_tort2::Array{Float64,1} = delta_tort2i.*tort2
@@ -154,7 +154,7 @@ Peh::Array{Float64,1} = @. w*z_res/2.0D_bio
 # ^one half the cell Peclet number (Eq. 97 in Boudreau 1996)
 # when Peh<<1, biodiffusion dominates, when Peh>>1, advection dominates
 sigma::Array{Float64,1} = @. 1.0/tanh(Peh) - 1.0/(Peh) # Eq. 96 in Boudreau 1996
-sigma[2] = 0.0 # I think
+# sigma[2] = 0.0 # don't do this
 sigma1m::Array{Float64,1} = 1.0 .- sigma
 sigma1p::Array{Float64,1} = 1.0 .+ sigma
 
