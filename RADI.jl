@@ -171,7 +171,7 @@ alpha::Array{Float64,1} = @. alpha_0*exp(-(depths/lambda_i)^2)
 APPW::Array{Float64,1} = @. w - delta_D_bio - delta_phiS*D_bio/phiS
 TR::Float64 = 2.0z_res*tort2[2]/dbl
 Foc_phiS_0::Float64 = Foc/phiS[2]
-zr_Db_0::Float64 = 2.0z_res/D_bio_0
+zr_Db_0::Float64 = 2.0z_res/D_bio[2]
 # ^^^ NOT YET IN THE PARAMETERS PART OF THE DOCUMENTATION ^^^^^^^^^^^^^^^^^^^^^^
 
 "Substitute in above-surface value for solutes."
@@ -253,13 +253,17 @@ for t in 1:ntps
 
         # --- First, do all the physical processes -----------------------------
         # Dissolved oxygen (solute)
-        advect!(z, oxy0, oxy, D_oxy_tort2[z])
         diffuse!(z, oxy0, oxy, D_oxy_tort2[z])
+        advect!(z, oxy0, oxy, D_oxy_tort2[z])
         irrigate!(z, oxy0, oxy, oxy_w)
 
         # Particulate organic carbon (solid)
-        advect!(z, poc0, poc)
         diffuse!(z, poc0, poc, D_bio[z])
+        if (t == 1) && (z == 2)
+            println("diffusive OC term at top:")
+            println(poc[z] - poc0[z])
+        end # if
+        advect!(z, poc0, poc)
 
         # --- Now do the reactions! --------------------------------------------
         # Calculate maximum reaction rates based on previous timestep
