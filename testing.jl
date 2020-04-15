@@ -7,9 +7,9 @@ Plots.closeall()
 include("RADI.jl")
 import .RADI
 
-stoptime = 5.0
-interval = 0.5/128000
-saveperXsteps = 2*128000
+stoptime = 5/8760 # 5.0
+interval = 1/8760 # 0.5/128000
+saveperXsteps = 1 # 2*128000
 oxy_i = 0.0
 poc_i = 0.0
 

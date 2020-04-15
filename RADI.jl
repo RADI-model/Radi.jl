@@ -34,7 +34,7 @@ function model(stoptime::Float64, interval::Float64, saveperXsteps::Int,
 
 # Model time grid: function inputs
 # Model depth grid
-z_res::Float64 = 0.05e-2 # m
+z_res::Float64 = 2e-2 # 0.05e-2 # m
 z_max::Float64 = 20e-2 # m
 
 # Overlying water conditions
