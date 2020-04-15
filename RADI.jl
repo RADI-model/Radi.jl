@@ -83,7 +83,8 @@ ndepths::Int = length(depths)
 function makearrays(var_start::Float64)
     var0::Array{Float64,1} = fill(var_start, ndepths)
     var::Array{Float64,1} = copy(var0)
-    var_save::Array{Float64,2} = fill(NaN, (ndepths-2, nsps))
+    var_save::Array{Float64,2} = fill(NaN, (ndepths-2, nsps+1))
+    var_save[:, 1] = var0[2:end-1]
     return var0, var, var_save
 end # function makearrays
 
@@ -91,7 +92,8 @@ end # function makearrays
 function makearrays(var_start::Array{Float64,1})
     var0::Array{Float64,1} = vcat(NaN, var_start, NaN)
     var::Array{Float64,1} = copy(var0)
-    var_save::Array{Float64,2} = fill(NaN, (ndepths-2, nsps))
+    var_save::Array{Float64,2} = fill(NaN, (ndepths-2, nsps+1))
+    var_save[:, 1] = var0[2:end-1]
     return var0, var, var_save
 end # function makearrays
 
@@ -259,12 +261,13 @@ for t in 1:ntps
         diffuse!(z, oxy0, oxy, D_oxy_tort2[z])
         irrigate!(z, oxy0, oxy, oxy_w)
 
+        # if (t == 1) && (z == 2)
+        #     println("irrigative oxy term at top:")
+        #     println(oxy[z] - oxy0[z])
+        # end # if
+
         # Particulate organic carbon (solid)
         advect!(z, poc0, poc)
-        if (t == 1) && (z == 2)
-            println("advective poc term at top:")
-            println(poc[z] - poc0[z])
-        end # if
         diffuse!(z, poc0, poc, D_bio[z])
 
         # --- Now do the reactions! --------------------------------------------
@@ -286,16 +289,16 @@ for t in 1:ntps
         react!(z, oxy, R_oxy)
         react!(z, poc, R_poc)
 
+        if (t == 1) && (z == 2)
+            println("total oxy change at top:")
+            println(oxy[z] - oxy0[z])
+        end # if
+
     # ~~~ END SEDIMENT PROCESSING ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         # Save output if we are at a savepoint
         if tsave
-            if t == 1
-                oxy_save[z-1, sp] = oxy0[z]
-                poc_save[z-1, sp] = poc0[z]
-            else
-                oxy_save[z-1, sp] = oxy[z]
-                poc_save[z-1, sp] = poc[z]
-            end
+            oxy_save[z-1, sp+1] = oxy[z]
+            poc_save[z-1, sp+1] = poc[z]
             if z == ndepths-1
                 println("RADI: reached savepoint $sp (step $t of $ntps)...")
                 sp += 1
