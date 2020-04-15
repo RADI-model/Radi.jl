@@ -121,7 +121,6 @@ phiS::Array{Float64,1} = 1.0 .- phi # solid volume fraction
 phiS_phi::Array{Float64,1} = phiS./phi
 tort2::Array{Float64,1} = @. 1.0 - 2.0log(phi)
 # ^tortuosity squared from Boudreau (1996, GCA)
-# tort::Array{Float64,1} = sqrt.(tort2) # tortuosity
 delta_phi::Array{Float64,1} = @. -beta*(phi0 - phiInf)*exp(-beta*depths)
 delta_phi[2] = 0.0 # are we sure about this?
 delta_phiS::Array{Float64,1} = -delta_phi
@@ -247,34 +246,23 @@ end # function irrigate!
 # ===== Run RADI run: main model loop ==========================================
 for t in 1:ntps
     tsave::Bool = t in savepoints # i.e. do we save this time?
-
     # Substitutions above and below the modelled sediment column
     substitute!(oxy0, oxy_w)
     substitute!(poc0)
-
     @simd for z in 2:(ndepths-1)
     # ~~~ BEGIN SEDIMENT PROCESSING ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
         # --- First, do all the physical processes -----------------------------
         # Dissolved oxygen (solute)
         advect!(z, oxy0, oxy, D_oxy_tort2[z])
         diffuse!(z, oxy0, oxy, D_oxy_tort2[z])
         irrigate!(z, oxy0, oxy, oxy_w)
-
-        # if (t == 1) && (z == 2)
-        #     println("irrigative oxy term at top:")
-        #     println(oxy[z] - oxy0[z])
-        # end # if
-
         # Particulate organic carbon (solid)
         advect!(z, poc0, poc)
         diffuse!(z, poc0, poc, D_bio[z])
-
         # --- Now do the reactions! --------------------------------------------
         # Calculate maximum reaction rates based on previous timestep
         R_poc::Float64 = -poc0[z]*krefractory[z]
         R_oxy::Float64 = R_poc*phiS_phi[z]
-
         # Check maximum reaction rates are possible after other processes have
         # acted in this timestep, and correct them if not
         if oxy[z] + react(R_oxy) < 0.0
@@ -285,15 +273,8 @@ for t in 1:ntps
             R_poc = -poc[z]/interval
             R_oxy = R_poc*phiS_phi[z]
         end # if
-
         react!(z, oxy, R_oxy)
         react!(z, poc, R_poc)
-
-        if (t == 1) && (z == 2)
-            println("total oxy change at top:")
-            println(oxy[z] - oxy0[z])
-        end # if
-
     # ~~~ END SEDIMENT PROCESSING ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         # Save output if we are at a savepoint
         if tsave
