@@ -4,14 +4,21 @@ using Colors, Plots, Profile, ProfileView
 Plots.default(show=true)
 Plots.closeall()
 
+include("gsw_rho.jl")
 include("RADI.jl")
 import .RADI
+
+# set initial oxy to oxy_w multiple
+T = 1.4 # temperature / degC
+S = 34.69 # practical salinity
+rho_sw = gsw_rho(S, T, 1) # seawater density [kg/m^3]
+oxy_w = 159.7e-6*rho_sw # dissolved oxygen [mol/m3]
 
 stoptime = 5/8760 # 5.0
 interval = 1/8760 # 0.5/128000
 saveperXsteps = 1 # 2*128000
-oxy_i = 0.0
-poc_i = 0.0
+oxy_i = oxy_w*2/3
+poc_i = 1e4
 
 function radiplot(oxy_i, poc_i)
     @time depths, oxy, poc = RADI.model(stoptime, interval, saveperXsteps,
