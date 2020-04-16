@@ -168,7 +168,7 @@ function model(
     Fpom::Float64,
     rho_pom::Float64,
     dO2_i::FloatOrArray,
-    poc_i::FloatOrArray,
+    pfoc_i::FloatOrArray,
 )
 
 # Set up model time and depth grids
@@ -312,13 +312,13 @@ end # function irrigate!
 # ===== Run RADI run! ==========================================================
 # Create variables to model
 dO2 = makeSolute(dO2_i, dO2_w, D_dO2_tort2)
-poc = makeSolid(poc_i, D_bio)
+pfoc = makeSolid(pfoc_i, D_bio)
 # Main RADI model loop
 for t in 1:ntps
     tsave::Bool = t in savepoints # i.e. do we save this time?
     # Substitutions above and below the modelled sediment column
     substitute!(dO2)
-    substitute!(poc)
+    substitute!(pfoc)
     @simd for z in 2:(ndepths-1)
     # ~~~ BEGIN SEDIMENT PROCESSING ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         # --- First, do all the physical processes -----------------------------
@@ -326,30 +326,30 @@ for t in 1:ntps
         advect!(z, dO2)
         diffuse!(z, dO2)
         irrigate!(z, dO2)
-        # Particulate organic carbon (solid)
-        advect!(z, poc)
-        diffuse!(z, poc)
+        # Fast-degrading particulate organic carbon (solid)
+        advect!(z, pfoc)
+        diffuse!(z, pfoc)
         # --- Then do the reactions! -------------------------------------------
         # Calculate maximum reaction rates based on previous timestep
-        R_poc::Float64 = -poc.then[z]*krefractory[z]
-        R_dO2::Float64 = R_poc*phiS_phi[z]
+        R_pfoc::Float64 = -pfoc.then[z]*krefractory[z]
+        R_dO2::Float64 = R_pfoc*phiS_phi[z]
         # Check maximum reaction rates are possible after other processes have
         # acted in this timestep, and correct them if not
         if dO2.now[z] + interval*R_dO2 < 0.0
             R_dO2 = -dO2.now[z]/interval
-            R_poc = R_dO2/phiS_phi[z]
+            R_pfoc = R_dO2/phiS_phi[z]
         end # if
-        if poc.now[z] + interval*R_poc < 0.0
-            R_poc = -poc.now[z]/interval
-            R_dO2 = R_poc*phiS_phi[z]
+        if pfoc.now[z] + interval*R_pfoc < 0.0
+            R_pfoc = -pfoc.now[z]/interval
+            R_dO2 = R_pfoc*phiS_phi[z]
         end # if
         react!(z, dO2, R_dO2)
-        react!(z, poc, R_poc)
+        react!(z, pfoc, R_pfoc)
     # ~~~ END SEDIMENT PROCESSING ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         # Save output if we are at a savepoint
         if tsave
             dO2.save[z-1, sp+1] = dO2.now[z]
-            poc.save[z-1, sp+1] = poc.now[z]
+            pfoc.save[z-1, sp+1] = pfoc.now[z]
             if z == ndepths-1
                 println("RADI: reached savepoint $sp (step $t of $ntps)...")
                 sp += 1
@@ -359,18 +359,18 @@ for t in 1:ntps
     # Copy results into "previous step" arrays
     @simd for z in 2:(ndepths-1)
         dO2.then[z] = dO2.now[z]
-        poc.then[z] = poc.now[z]
+        pfoc.then[z] = pfoc.now[z]
     end # for z in 2:(ndepths-1)
 end # for t
 # ===== End of main model loop =================================================
-return depths[2:end-1], dO2.save, poc.save
+return depths[2:end-1], dO2.save, pfoc.save
 end # function model
 
 say_RADI() = println("RADI done!")
 
 "Calculate how far from equilibrium the sediment column is."
-function disequilibrium(dO2, poc)
-    return dO2, poc
+function disequilibrium(dO2, pfoc)
+    return dO2, pfoc
 end # function disequilibrium
 
 end # module RADI
