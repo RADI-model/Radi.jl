@@ -4,6 +4,34 @@ using Base.SimdLoop
 
 include("gsw_rho.jl")
 
+# Try type stuff
+struct Solute
+    now::Array{Float64,1}
+    then::Array{Float64,1}
+    above::Float64
+    dvar::Array{Float64,1}
+    save::Array{Float64,2}
+end # struct Solute
+
+struct Solid
+    now::Array{Float64,1}
+    then::Array{Float64,1}
+    dvar::Array{Float64,1}
+    save::Array{Float64,2}
+end # struct Solute
+
+SoluteOrSolid = SolidOrSolute = Union{Solid,Solute}
+
+function Solute(var_start::Array{Float64,1}, above::Float64,
+        dvar::Array{Float64,1}, var_save::Array{Float64,2})
+    return Solute(copy(var_start), copy(var_start), above, dvar, var_save)
+end # function Solute
+
+function Solid(var_start::Array{Float64,1}, dvar::Array{Float64,1},
+        var_save::Array{Float64,2})
+    return Solid(copy(var_start), copy(var_start), dvar, var_save)
+end # function Solid
+
 """
     timeprep(t_start, t_end, t_interval, saveperXsteps)
 
@@ -97,6 +125,22 @@ function makearrays(var_start::Array{Float64,1})
     return var0, var, var_save
 end # function makearrays
 
+function makeSolute(var_start::Float64, above::Float64, D_var::Array{Float64})
+    var_start = fill(var_start, ndepths)
+    var_start[1] = above
+    var_save::Array{Float64,2} = fill(NaN, (ndepths-2, nsps+1))
+    var_save[:, 1] = var_start[2:end-1]
+    return Solute(var_start, above, D_var, var_save)
+end # function makeSolute
+
+function makeSolid(var_start::Float64, D_var::Array{Float64})
+    var_start = fill(var_start, ndepths)
+    # var[1] = above
+    var_save::Array{Float64,2} = fill(NaN, (ndepths-2, nsps+1))
+    var_save[:, 1] = var_start[2:end-1]
+    return Solid(var_start, D_var, var_save)
+end # function makeSolid
+
 # Create arrays for modelled variables
 oxy0, oxy, oxy_save = makearrays(oxy_i)
 poc0, poc, poc_save = makearrays(poc_i)
@@ -177,6 +221,10 @@ Foc_phiS_0::Float64 = Foc/phiS[2]
 zr_Db_0::Float64 = 2.0z_res/D_bio[2]
 # ^^^ NOT YET IN THE PARAMETERS PART OF THE DOCUMENTATION ^^^^^^^^^^^^^^^^^^^^^^
 
+# New variable types
+axy = makeSolute(oxy_i, oxy_w, D_oxy_tort2)
+pac = makeSolid(poc_i, D_bio)
+
 "Substitute in above-surface value for solutes."
 function surface!(var0::Array{Float64,1}, var_w::Float64)
     # # Equation following Boudreau (1996, method-of-lines):
@@ -208,6 +256,17 @@ function substitute!(var0::Array{Float64,1})
     bottom!(var0)
 end # function substitute!
 
+"Substitute in above-surface and below-bottom values for solutes."
+function substitute!(var::Solute)
+    surface!(var.then, var.above)
+    bottom!(var.then)
+end # function substitute!
+
+function substitute!(var::Solid)
+    surface!(var.then)
+    bottom!(var.then)
+end # function substitute!
+
 # "Calculate reaction rate for solutes and solids."
 # function react(rate::Float64)::Float64
 #     return interval*rate
@@ -215,21 +274,57 @@ end # function substitute!
 
 "Apply reaction for solutes and solids."
 function react!(z::Int, var::Array{Float64,1}, rate::Float64)
-    # var[z] += react(rate)
     var[z] += interval*rate
 end # function react!
 
-"Advection for solutes."
+"Apply reaction for Solute."
+function react!(z::Int, var::SolidOrSolute, rate::Float64)
+    var.now[z] += interval*rate
+end # function react
+
+"Calculate advection rate for solutes."
+function advectsolute(var0_z1p::Float64, var0_z1m::Float64, u_z::Float64,
+        delta_phi_z::Float64, phi_z::Float64, delta_tort2_tort2_z::Float64,
+        D_var::Float64)
+    return -(u_z - delta_phi_z*D_var/phi_z -
+        D_var*delta_tort2_tort2_z)*(var0_z1p - var0_z1m)/(2.0z_res)
+end # function advect
+
+"Apply advection for solutes."
 function advect!(z::Int, var0::Array{Float64,1}, var::Array{Float64,1},
         D_var::Float64)
-    var[z] += -interval*(u[z] - delta_phi[z]*D_var/phi[z] -
-        D_var*delta_tort2_tort2[z])*(var0[z+1] - var0[z-1])/(2.0z_res)
+    var[z] += interval*advectsolute(var0[z+1], var0[z-1], u[z], delta_phi[z],
+        phi[z], delta_tort2_tort2[z], D_var)
 end # function advect!
 
-"Advection for solids."
+"Apply advection for Solutes."
+function advect!(z::Int, var::Solute)
+    var.now[z] += interval*advectsolute(var.then[z+1], var.then[z-1], u[z],
+        delta_phi[z], phi[z], delta_tort2_tort2[z], var.dvar[z])
+end # function advect!
+
+"Calculate advection rate for solids."
+function advectsolid(var0_z::Float64, var0_z1p::Float64, var0_z1m::Float64,
+        APPW_z::Float64, sigma_z::Float64, sigma1p_z::Float64,
+        sigma1m_z::Float64)
+    return -APPW_z*(sigma1m_z*var0_z1p + 2.0sigma_z*var0_z -
+        sigma1p_z*var0_z1m)/(2.0z_res)
+end # function advectsolid
+
+"Apply advection for solids."
 function advect!(z::Int, var0::Array{Float64,1}, var::Array{Float64,1})
-    var[z] += -interval*APPW[z]*(sigma1m[z]*var0[z+1] + 2.0sigma[z]*var0[z] -
-        sigma1p[z]*var0[z-1])/(2.0z_res)
+    # var[z] += -interval*APPW[z]*(sigma1m[z]*var0[z+1] + 2.0sigma[z]*var0[z] -
+    #     sigma1p[z]*var0[z-1])/(2.0z_res)
+    var[z] += interval*advectsolid(var0[z], var0[z+1], var0[z-1], APPW[z],
+        sigma[z], sigma1p[z], sigma1m[z])
+end # function advect!
+
+"Apply advection for Solids."
+function advect!(z::Int, var::Solid)
+    # var[z] += -interval*APPW[z]*(sigma1m[z]*var0[z+1] + 2.0sigma[z]*var0[z] -
+    #     sigma1p[z]*var0[z-1])/(2.0z_res)
+    var.now[z] += interval*advectsolid(var.then[z], var.then[z+1],
+        var.then[z-1], APPW[z], sigma[z], sigma1p[z], sigma1m[z])
 end # function advect!
 
 "Calculate diffusion rate throughout the sediment, solutes and solids."
@@ -244,6 +339,12 @@ function diffuse!(z::Int, var0::Array{Float64,1}, var::Array{Float64,1},
     var[z] += interval*diffuse(var0[z-1], var0[z], var0[z+1], D_var)
 end # function diffuse!
 
+"Apply diffusion throughout the sediment, Solutes."
+function diffuse!(z::Int, var::SolidOrSolute)
+    var.now[z] += interval*diffuse(var.then[z-1], var.then[z], var.then[z+1],
+        var.dvar[z])
+end # function diffuse!
+
 "Calculate irrigation rate of solutes only throughout the sediment."
 function irrigate(var0_z::Float64, var_w::Float64, alpha_z::Float64)
     return alpha_z*(var_w - var0_z)
@@ -255,12 +356,19 @@ function irrigate!(z::Int, var0::Array{Float64,1}, var::Array{Float64,1},
     var[z] += interval*irrigate(var0[z], var_w, alpha[z])
 end # function irrigate!
 
+"Apply irrigation of Solutes only throughout the sediment."
+function irrigate!(z::Int, var::Solute)
+    var.now[z] += interval*irrigate(var.then[z], var.above, alpha[z])
+end # function irrigate!
+
 # ===== Run RADI run: main model loop ==========================================
 for t in 1:ntps
     tsave::Bool = t in savepoints # i.e. do we save this time?
     # Substitutions above and below the modelled sediment column
     substitute!(oxy0, oxy_w)
     substitute!(poc0)
+    substitute!(axy)
+    substitute!(pac)
     @simd for z in 2:(ndepths-1)
     # ~~~ BEGIN SEDIMENT PROCESSING ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         # --- First, do all the physical processes -----------------------------
@@ -268,9 +376,16 @@ for t in 1:ntps
         advect!(z, oxy0, oxy, D_oxy_tort2[z])
         diffuse!(z, oxy0, oxy, D_oxy_tort2[z])
         irrigate!(z, oxy0, oxy, oxy_w)
+        # axy testing
+        advect!(z, axy)
+        diffuse!(z, axy)
+        irrigate!(z, axy)
         # Particulate organic carbon (solid)
         advect!(z, poc0, poc)
         diffuse!(z, poc0, poc, D_bio[z])
+        # pac testing
+        advect!(z, pac)
+        diffuse!(z, pac)
         # --- Now do the reactions! --------------------------------------------
         # Calculate maximum reaction rates based on previous timestep
         R_poc::Float64 = -poc0[z]*krefractory[z]
@@ -287,11 +402,15 @@ for t in 1:ntps
         end # if
         react!(z, oxy, R_oxy)
         react!(z, poc, R_poc)
+        react!(z, axy, R_oxy)
+        react!(z, pac, R_poc)
     # ~~~ END SEDIMENT PROCESSING ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         # Save output if we are at a savepoint
         if tsave
             oxy_save[z-1, sp+1] = oxy[z]
             poc_save[z-1, sp+1] = poc[z]
+            axy.save[z-1, sp+1] = axy.now[z]
+            pac.save[z-1, sp+1] = pac.now[z]
             if z == ndepths-1
                 println("RADI: reached savepoint $sp (step $t of $ntps)...")
                 sp += 1
@@ -302,10 +421,12 @@ for t in 1:ntps
     @simd for z in 2:(ndepths-1)
         oxy0[z] = oxy[z]
         poc0[z] = poc[z]
+        axy.then[z] = axy.now[z]
+        pac.then[z] = pac.now[z]
     end # for z in 2:(ndepths-1)
 end # for t
 # ===== End of main model loop =================================================
-return depths[2:end-1], oxy_save, poc_save
+return depths[2:end-1], oxy_save, poc_save, axy.save, pac.save
 end # function model
 
 say_RADI() = println("RADI done!")
