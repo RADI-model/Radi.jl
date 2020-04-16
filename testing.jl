@@ -26,8 +26,8 @@ phi0 = 0.85 # sediment porosity at the surface
 beta = 33.0 # sediment porosity-depth relationship parameter
 
 # Define characteristic depths
-lambda_b = 0.08 # for bioturbation
-lambda_i = 0.05 # for irrigation
+lambda_b = 0.08 # for bioturbation / m
+lambda_i = 0.05 # for irrigation / m
 
 # Define overlying water column properties
 T = 1.4 # temperature / degC
@@ -45,14 +45,10 @@ rho_pom = 2.65e6 # solid POM density / g/m^3
 dO2_i = dO2_w*2/3 # dissolved oxygen / mol/m^3
 poc_i = 0.0 # particulate organic carbon / unit?
 
-# Collect model arguments except input conditions
-RADIargs = (stoptime, interval, saveperXsteps, z_max, z_res, dbl, phiInf, phi0,
-    beta, lambda_b, lambda_i, T, S, P, dO2_w, dtPO4_w, Fpom, rho_pom)
-
 function radiplot(dO2_i, poc_i)
-    @time depths, oxyx, pocx = RADI.model(RADIargs..., dO2_i, poc_i)
-    oxy = oxyx.save
-    poc = pocx.save
+    @time depths, oxy, poc = RADI.model(stoptime, interval, saveperXsteps,
+        z_max, z_res, dbl, phiInf, phi0, beta, lambda_b, lambda_i, T, S, P,
+        dO2_w, dtPO4_w, Fpom, rho_pom, dO2_i, poc_i)
     ntps = size(oxy)[2]
     cmap = colormap("RdBu", ntps)
     cs = ntps

@@ -363,7 +363,7 @@ for t in 1:ntps
     end # for z in 2:(ndepths-1)
 end # for t
 # ===== End of main model loop =================================================
-return depths[2:end-1], dO2, poc
+return depths[2:end-1], dO2.save, poc.save
 end # function model
 
 say_RADI() = println("RADI done!")
