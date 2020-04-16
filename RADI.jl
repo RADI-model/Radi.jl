@@ -1,7 +1,6 @@
 module RADI
 
 using Base.SimdLoop
-
 include("gsw_rho.jl")
 
 struct Solute
@@ -39,7 +38,7 @@ Prepare vectors of model timesteps and savepoints. All time units are in days.
 function timeprep(stoptime::Float64, interval::Float64, saveperXsteps::Int)
     timesteps::Array{Float64,1} = collect(0.0:interval:stoptime)
     ntps::Int = length(timesteps)
-    savepoints::Array{Float64,1} = collect(1:saveperXsteps:ntps)
+    savepoints::Array{Int64,1} = collect(1:saveperXsteps:ntps)
     # Save final timepoint if it's not already in the list
     if !(ntps in savepoints)
         append!(savepoints, ntps)
@@ -61,7 +60,7 @@ function model(stoptime::Float64, interval::Float64, saveperXsteps::Int,
 
 # Model time grid: function inputs
 # Model depth grid
-z_res::Float64 = 2e-2 # 0.05e-2 # m
+z_res::Float64 = 0.5e-2 # 2e-2 # 0.05e-2 # m
 z_max::Float64 = 20e-2 # m
 
 # Overlying water conditions
@@ -283,10 +282,11 @@ end # function advectsolid
 
 "Advect a Solid."
 function advect!(z::Int, var::Solid)
-    # var[z] += -interval*APPW[z]*(sigma1m[z]*var0[z+1] + 2.0sigma[z]*var0[z] -
-    #     sigma1p[z]*var0[z-1])/(2.0z_res)
-    var.now[z] += interval*advectsolid(var.then[z], var.then[z+1],
-        var.then[z-1], APPW[z], sigma[z], sigma1p[z], sigma1m[z])
+    var.now[z] += -interval*APPW[z]*(sigma1m[z]*var.then[z+1] +
+        2.0sigma[z]*var.then[z] - sigma1p[z]*var.then[z-1])/(2.0z_res)
+# No idea why the approach below is so much slower, only for this function?!
+    # var.now[z] += interval*advectsolid(var.then[z], var.then[z+1],
+    #     var.then[z-1], APPW[z], sigma[z], sigma1p[z], sigma1m[z])
 end # function advect!
 
 "Calculate diffusion rate of a solute or solid."
@@ -302,8 +302,8 @@ function diffuse!(z::Int, var::SolidOrSolute)
 end # function diffuse!
 
 "Calculate irrigation rate of a solute."
-function irrigate(then_z::Float64, var_w::Float64, alpha_z::Float64)
-    return alpha_z*(var_w - then_z)
+function irrigate(then_z::Float64, above::Float64, alpha_z::Float64)
+    return alpha_z*(above - then_z)
 end # function irrigate
 
 "Irrigate a Solute throughout the sediment."
@@ -327,7 +327,7 @@ for t in 1:ntps
         # Particulate organic carbon (solid)
         advect!(z, poc)
         diffuse!(z, poc)
-        # --- Now do the reactions! --------------------------------------------
+        # --- Then do the reactions! -------------------------------------------
         # Calculate maximum reaction rates based on previous timestep
         R_poc::Float64 = -poc.then[z]*krefractory[z]
         R_dO2::Float64 = R_poc*phiS_phi[z]
@@ -361,7 +361,7 @@ for t in 1:ntps
     end # for z in 2:(ndepths-1)
 end # for t
 # ===== End of main model loop =================================================
-return depths[2:end-1], dO2.save, poc.save
+return depths[2:end-1], dO2, poc
 end # function model
 
 say_RADI() = println("RADI done!")
