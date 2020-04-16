@@ -3,6 +3,7 @@ module RADI
 using Base.SimdLoop
 include("gsw_rho.jl")
 
+"Define Solute type."
 struct Solute
     now::Array{Float64,1}
     then::Array{Float64,1}
@@ -11,6 +12,7 @@ struct Solute
     save::Array{Float64,2}
 end # struct Solute
 
+"Define Solid type."
 struct Solid
     now::Array{Float64,1}
     then::Array{Float64,1}
@@ -19,23 +21,22 @@ struct Solid
 end # struct Solute
 
 SoluteOrSolid = SolidOrSolute = Union{Solid,Solute}
+FloatOrArray = ArrayOrFloat = Union{Float64,Array{Float64,1}}
 
+"Constructor for a Solute."
 function Solute(var_start::Array{Float64,1}, above::Float64,
         dvar::Array{Float64,1}, var_save::Array{Float64,2})
     return Solute(copy(var_start), copy(var_start), above, dvar, var_save)
 end # function Solute
 
+"Constructor for a Solid."
 function Solid(var_start::Array{Float64,1}, dvar::Array{Float64,1},
         var_save::Array{Float64,2})
     return Solid(copy(var_start), copy(var_start), dvar, var_save)
 end # function Solid
 
-"""
-    timeprep(t_start, t_end, t_interval, saveperXsteps)
-
-Prepare vectors of model timesteps and savepoints. All time units are in days.
-"""
-function timeprep(stoptime::Float64, interval::Float64, saveperXsteps::Int)
+"Prepare vectors of model timesteps and savepoints. All time units are in days."
+function preptime(stoptime::Float64, interval::Float64, saveperXsteps::Int)
     timesteps::Array{Float64,1} = collect(0.0:interval:stoptime)
     ntps::Int = length(timesteps)
     savepoints::Array{Int64,1} = collect(1:saveperXsteps:ntps)
@@ -45,15 +46,21 @@ function timeprep(stoptime::Float64, interval::Float64, saveperXsteps::Int)
     end
     nsps::Int = length(savepoints)
     return timesteps, savepoints, ntps, nsps
-end # function timeprep
+end # function preptime
 
-"""
-    model()
+"Prepare the model's depth vector. All depth units are in metres."
+function prepdepth(depth_res::Float64, depth_max::Float64)
+    depths = collect(-depth_res:depth_res:(depth_max+depth_res)) # in m
+    depths[1] = NaN
+    depths[end] = NaN
+    ndepths = length(depths)
+    depth_res2 = depth_res^2
+    return depths, ndepths, depth_res2
+end # function prepdepth
 
-Run the RADI model.
-"""
+"Run the RADI model"
 function model(stoptime::Float64, interval::Float64, saveperXsteps::Int,
-    dO2_i, poc_i)
+    dO2_i::FloatOrArray, poc_i::FloatOrArray)
 # ==============================================================================
 # === User inputs/settings =====================================================
 # ==============================================================================
@@ -93,17 +100,10 @@ lambda_i::Float64 = 0.05 # [m] characteristic depth for irrigation
 # === The model: user changes nothing below here ===============================
 # ==============================================================================
 
-# Set up model time grid
-timesteps::Array{Float64,1}, savepoints::Array{Float64,1}, ntps::Int,
-    nsps::Int = timeprep(stoptime, interval, saveperXsteps)
-sp::Int = 1
-
-# Set up depth grid
-z_res2::Float64 = z_res^2
-depths::Array{Float64,1} = collect(-z_res:z_res:(z_max+z_res)) # in m
-depths[1] = NaN
-depths[end] = NaN
-ndepths::Int = length(depths)
+# Set up model time and depth grids
+timesteps, savepoints, ntps, nsps = preptime(stoptime, interval, saveperXsteps)
+depths, ndepths, z_res2 = prepdepth(z_res, z_max)
+sp = 1 # initialise savepoints
 
 # "Redfield" ratios
 RC::Float64 = @. 1.0/(6.9e-3po4_w/(1e-6rho_sw) + 6e-3)
@@ -282,7 +282,7 @@ end # function advectsolid
 
 "Advect a Solid."
 function advect!(z::Int, var::Solid)
-    var.now[z] += -interval*APPW[z]*(sigma1m[z]*var.then[z+1] +
+    var.now[z] += interval*-APPW[z]*(sigma1m[z]*var.then[z+1] +
         2.0sigma[z]*var.then[z] - sigma1p[z]*var.then[z-1])/(2.0z_res)
 # No idea why the approach below is so much slower, only for this function?!
     # var.now[z] += interval*advectsolid(var.then[z], var.then[z+1],
@@ -365,5 +365,10 @@ return depths[2:end-1], dO2, poc
 end # function model
 
 say_RADI() = println("RADI done!")
+
+"Calculate how out of equilibrium the sediment column is."
+function disequilibrium(dO2, poc)
+    return dO2, poc
+end # function disequilibrium
 
 end # module RADI
