@@ -66,10 +66,11 @@ function assemble(
     dtPO4_w::Float64,
     dO2_w::Float64,
     T::Float64,
+    S::Float64,
+    P::Float64,
     dbl::Float64,
-    rho_sw::Float64,
-    rho_pom::Float64,
     Fpom::Float64,
+    rho_pom::Float64,
     phi0::Float64,
     phiInf::Float64,
     beta::Float64,
@@ -78,6 +79,7 @@ function assemble(
 )
 
     # "Redfield" ratios and OM stoichiometry
+    rho_sw = gsw_rho(S, T, P) # seawater density [kg/m^3]
     RC, RN, RP = Params.redfield(dtPO4_w, rho_sw)
     Mpom = Params.rmm_pom(RC, RN, RP)
     Fpom_mol = Fpom/Mpom
@@ -150,57 +152,35 @@ function model(
     stoptime::Float64,
     interval::Float64,
     saveperXsteps::Int,
+    z_max::Float64,
+    z_res::Float64,
+    dbl::Float64,
+    phiInf::Float64,
+    phi0::Float64,
+    beta::Float64,
+    lambda_b::Float64,
+    lambda_i::Float64,
+    T::Float64,
+    S::Float64,
+    P::Float64,
+    dO2_w::Float64,
+    dtPO4_w::Float64,
+    Fpom::Float64,
+    rho_pom::Float64,
     dO2_i::FloatOrArray,
     poc_i::FloatOrArray,
 )
-# ==============================================================================
-# === User inputs/settings =====================================================
-# ==============================================================================
-
-# Model time grid: function inputs
-# Model depth grid
-z_res::Float64 = 0.5e-2 # 2e-2 # 0.05e-2 # m
-z_max::Float64 = 20e-2 # m
-
-# Overlying water conditions
-T::Float64 = 1.4 # temperature / degC
-S::Float64 = 34.69 # practical salinity
-rho_sw::Float64 = gsw_rho(S, T, 1) # seawater density [kg/m^3]
-dO2_w::Float64 = 159.7e-6*rho_sw # dissolved oxygen [mol/m3]
-dtPO4_w::Float64 = 2.39e-6*rho_sw # phosphate from GLODAP at station location,
-                                  # bottom waters [mol/m3]
-dbl::Float64 = 1e-3 # [m] thickness at location from Sulpis et al. 2018 PNAS
-
-# Organic matter flux to the surface sediment
-Fpom::Float64 = 36.45 # flux of particulate organic matter to seafloor [g/m2/a]
-# Fpoc = 1.0 # flux of total organic carbon to the bottom [mol/m2/a]
-rho_pom::Float64 = 2.65e6 # solid density [g/m3]
-
-# Sediment porosity
-# Porosity profile (porewater bulk fraction) fitted from station7 mooring3
-# of cruise NBP98-2 by Sayles et al. DSR 2001
-phiInf::Float64 = 0.74
-phi0::Float64 = 0.85
-beta::Float64 = 33.0
-
-# Characteristic depths
-lambda_b::Float64 = 0.08 # [m] characteristic depth of Archer et al. (2002),
-                         # value here following Martin & Sayles (1990)
-lambda_i::Float64 = 0.05 # [m] characteristic depth for irrigation
-
-# ==============================================================================
-# === The model: user changes nothing below here ===============================
-# ==============================================================================
 
 # Set up model time and depth grids
 timesteps, savepoints, ntps, nsps = preptime(stoptime, interval, saveperXsteps)
 depths, ndepths, z_res2 = prepdepth(z_res, z_max)
 sp = 1 # initialise savepoints
 
+# Assemble model parameters
 Fpoc, phi, phiS, phiS_phi, tort2, delta_phi, delta_phiS, delta_tort2i_tort2,
         D_bio, krefractory, u, w, sigma, sigma1m, sigma1p, D_dO2_tort2, alpha,
         APPW, TR, Fpoc_phiS_0, zr_Db_0 =
-    assemble(depths, z_res, dtPO4_w, dO2_w, T, dbl, rho_sw, rho_pom, Fpom,
+    assemble(depths, z_res, dtPO4_w, dO2_w, T, S, P, dbl, Fpom, rho_pom,
         phi0, phiInf, beta, lambda_b, lambda_i)
 
 "Prepare Solute with a constant start value."
@@ -239,10 +219,6 @@ function makeSolid(var_start::Array{Float64,1}, D_var::Array{Float64})
     var_save[:, 1] = var_start[2:end-1]
     return Solid(var_start, D_var, var_save)
 end # function makeSolid
-
-# Create variables to model
-dO2 = makeSolute(dO2_i, dO2_w, D_dO2_tort2)
-poc = makeSolid(poc_i, D_bio)
 
 "Calculate the above-surface value for a solute."
 function surfacesolute(then::Array{Float64,1}, above::Float64)
@@ -333,7 +309,11 @@ function irrigate!(z::Int, var::Solute)
     var.now[z] += interval*irrigate(var.then[z], var.above, alpha[z])
 end # function irrigate!
 
-# ===== Run RADI run: main model loop ==========================================
+# ===== Run RADI run! ==========================================================
+# Create variables to model
+dO2 = makeSolute(dO2_i, dO2_w, D_dO2_tort2)
+poc = makeSolid(poc_i, D_bio)
+# Main RADI model loop
 for t in 1:ntps
     tsave::Bool = t in savepoints # i.e. do we save this time?
     # Substitutions above and below the modelled sediment column
