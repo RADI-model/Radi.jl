@@ -208,14 +208,15 @@ function substitute!(var0::Array{Float64,1})
     bottom!(var0)
 end # function substitute!
 
-"Calculate reaction for solutes and solids."
-function react(rate::Float64)::Float64
-    return interval*rate
-end # function react
+# "Calculate reaction rate for solutes and solids."
+# function react(rate::Float64)::Float64
+#     return interval*rate
+# end # function react
 
 "Apply reaction for solutes and solids."
 function react!(z::Int, var::Array{Float64,1}, rate::Float64)
-    var[z] += react(rate)
+    # var[z] += react(rate)
+    var[z] += interval*rate
 end # function react!
 
 "Advection for solutes."
@@ -276,11 +277,11 @@ for t in 1:ntps
         R_oxy::Float64 = R_poc*phiS_phi[z]
         # Check maximum reaction rates are possible after other processes have
         # acted in this timestep, and correct them if not
-        if oxy[z] + react(R_oxy) < 0.0
+        if oxy[z] + interval*R_oxy < 0.0
             R_oxy = -oxy[z]/interval
             R_poc = R_oxy/phiS_phi[z]
         end # if
-        if poc[z] + react(R_poc) < 0.0
+        if poc[z] + interval*R_poc < 0.0
             R_poc = -poc[z]/interval
             R_oxy = R_poc*phiS_phi[z]
         end # if
