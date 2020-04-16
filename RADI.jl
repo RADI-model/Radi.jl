@@ -231,22 +231,27 @@ function advect!(z::Int, var0::Array{Float64,1}, var::Array{Float64,1})
         sigma1p[z]*var0[z-1])/(2.0z_res)
 end # function advect!
 
-"Diffusion throughout the sediment, solutes and solids."
+"Calculate diffusion rate throughout the sediment, solutes and solids."
 function diffuse(var0_z1m::Float64, var0_z::Float64, var0_z1p::Float64,
         D_var::Float64)
     return (var0_z1m - 2.0var0_z + var0_z1p)*D_var/z_res2
 end # function diffuse
 
-"Diffusion throughout the sediment, solutes and solids."
+"Apply diffusion throughout the sediment, solutes and solids."
 function diffuse!(z::Int, var0::Array{Float64,1}, var::Array{Float64,1},
         D_var::Float64)
     var[z] += interval*diffuse(var0[z-1], var0[z], var0[z+1], D_var)
 end # function diffuse!
 
-"Irrigation of solutes only throughout the sediment."
+"Calculate irrigation rate of solutes only throughout the sediment."
+function irrigate(var0_z::Float64, var_w::Float64, alpha_z::Float64)
+    return alpha_z*(var_w - var0_z)
+end # function irrigate
+
+"Apply irrigation of solutes only throughout the sediment."
 function irrigate!(z::Int, var0::Array{Float64,1}, var::Array{Float64,1},
         var_w::Float64)
-    var[z] += interval*alpha[z]*(var_w - var0[z])
+    var[z] += interval*irrigate(var0[z], var_w, alpha[z])
 end # function irrigate!
 
 # ===== Run RADI run: main model loop ==========================================
