@@ -8,21 +8,49 @@ include("gsw_rho.jl")
 include("RADI.jl")
 import .RADI
 
-# set initial oxy to oxy_w multiple
+# Define model timesteps (all times in years)
+stoptime = 50.0 # how long to run for
+interval = 5/128000 # duration of each model timestep
+saveperXsteps = 128000 # save results in intervals of this many timesteps
+
+# Define model depth steps (all depths in metres)
+z_res = 0.5e-2 # height of each depth step
+z_max = 20e-2 # total height of the modelled sediment column
+
+# Define diffusive boundary layer thickness in metres
+dbl = 1e-3
+
+# Define sediment porosity parameters
+phiInf = 0.74 # sediment porosity at infinite depth
+phi0 = 0.85 # sediment porosity at the surface
+beta = 33.0 # sediment porosity-depth relationship parameter
+
+# Define characteristic depths
+lambda_b = 0.08 # for bioturbation
+lambda_i = 0.05 # for irrigation
+
+# Define overlying water column properties
 T = 1.4 # temperature / degC
 S = 34.69 # practical salinity
-rho_sw = gsw_rho(S, T, 1) # seawater density [kg/m^3]
-oxy_w = 159.7e-6*rho_sw # dissolved oxygen [mol/m3]
+P = 1.0 # pressure / dbar
+rho_sw = gsw_rho(S, T, P) # seawater density / kg/m^3
+dO2_w = 159.7e-6*rho_sw # dissolved oxygen / mol/m^3
+dtPO4_w = 2.39e-6*rho_sw # total phosphate / mol/m^3
 
-stoptime = 50.0 # 5/8760 # 5.0
-interval = 5/128000 # 1/8760 # 0.5/128000
-saveperXsteps = 128000 # 1 # 2*128000
-oxy_i = oxy_w*2/3
-poc_i = 0*1e4
+# Define organic matter flux to the surface sediment
+Fpom = 36.45 # flux of POM to seafloor / g/m^2/a
+rho_pom = 2.65e6 # solid POM density / g/m^3
 
-function radiplot(oxy_i, poc_i)
-    @time depths, oxyx, pocx = RADI.model(stoptime, interval,
-        saveperXsteps, oxy_i, poc_i)
+# Define initial conditions within the sediment (scalars or arrays)
+dO2_i = dO2_w*2/3 # dissolved oxygen / mol/m^3
+poc_i = 0.0 # particulate organic carbon / unit?
+
+# Collect model arguments except input conditions
+RADIargs = (stoptime, interval, saveperXsteps, z_max, z_res, dbl, phiInf, phi0,
+    beta, lambda_b, lambda_i, T, S, P, dO2_w, dtPO4_w, Fpom, rho_pom)
+
+function radiplot(dO2_i, poc_i)
+    @time depths, oxyx, pocx = RADI.model(RADIargs..., dO2_i, poc_i)
     oxy = oxyx.save
     poc = pocx.save
     ntps = size(oxy)[2]
@@ -41,71 +69,11 @@ end # function radiplot
 showprofile = false
 if showprofile
     Profile.clear()
-    @profile depths, oxy, poc = RADI.model(stoptime, interval,
-        saveperXsteps, oxy_i, poc_i)
+    @profile depths, oxy, poc = RADI.model(RADIargs..., dO2_i, poc_i)
     ProfileView.view()
     RADI.say_RADI()
 else
-    depths, oxy, poc = radiplot(oxy_i, poc_i)
+    depths, oxy, poc = radiplot(dO2_i, poc_i)
 end
-
-# using Base.SimdLoop
-#
-# function forsimd(xmax::Int)
-#     y = 0
-#     @simd for x in 1:xmax
-#         y += sqrt(x)
-#     end # for x
-#     return y
-# end
-#
-# function fornormal(xmax::Int)
-#     y = 0
-#     for x in 1:xmax
-#         y += sqrt(x)
-#     end # for x
-#     return y
-# end
-#
-# xmax = 10000000
-# @time forsimd(xmax)
-# @time fornormal(xmax)
-
-# abstract type Solid end
-#
-# getx(value) = value::Solid
-
-# struct Solid
-# end
-
-
-# # Trying out composite type but slower and too clever for its own good
-# struct PorewaterVariable
-#     depths::Array{Float64,1}
-#     start::Array{Float64,1}
-#     previous::Array{Float64,1}
-#     now::Array{Float64,1}
-#     npts::Int64
-#     overlying::Float64
-# end # struct PorewaterVariable
-#
-# function PorewaterVariable(depths::Array{Float64,1}, start::Array{Float64,1},
-#         overlying::Float64)
-#     npts = length(depths)
-#     previous = fill(NaN, npts)
-#     PorewaterVariable(depths, start, previous, start, npts, overlying)
-# end # function PorewaterVariable
-#
-# function PorewaterVariable(depths::Array{Float64,1}, start::Float64,
-#         overlying::Float64)
-#     npts = length(depths)
-#     start = fill(start, npts)
-#     previous = fill(NaN, npts)
-#     PorewaterVariable(depths, start, previous, start, npts, overlying)
-# end # function PorewaterVariable
-#
-# function now2previous!(myh::PorewaterVariable)
-#     myh.previous[:] = myh.now
-# end # function now2previous!
 
 end # module tst

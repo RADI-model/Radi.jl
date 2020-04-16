@@ -368,7 +368,7 @@ end # function model
 
 say_RADI() = println("RADI done!")
 
-"Calculate how out of equilibrium the sediment column is."
+"Calculate how far from equilibrium the sediment column is."
 function disequilibrium(dO2, poc)
     return dO2, poc
 end # function disequilibrium
