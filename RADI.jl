@@ -232,9 +232,15 @@ function advect!(z::Int, var0::Array{Float64,1}, var::Array{Float64,1})
 end # function advect!
 
 "Diffusion throughout the sediment, solutes and solids."
+function diffuse(var0_z1m::Float64, var0_z::Float64, var0_z1p::Float64,
+        D_var::Float64)
+    return (var0_z1m - 2.0var0_z + var0_z1p)*D_var/z_res2
+end # function diffuse
+
+"Diffusion throughout the sediment, solutes and solids."
 function diffuse!(z::Int, var0::Array{Float64,1}, var::Array{Float64,1},
         D_var::Float64)
-    var[z] += interval*(var0[z-1] - 2.0var0[z] + var0[z+1])*D_var/z_res2
+    var[z] += interval*diffuse(var0[z-1], var0[z], var0[z+1], D_var)
 end # function diffuse!
 
 "Irrigation of solutes only throughout the sediment."
