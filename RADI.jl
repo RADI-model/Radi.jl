@@ -2,6 +2,7 @@ module RADI
 
 using Base.SimdLoop
 include("gsw_rho.jl")
+include("Params.jl")
 
 "Define Solute type."
 struct Solute
@@ -58,9 +59,100 @@ function prepdepth(depth_res::Float64, depth_max::Float64)
     return depths, ndepths, depth_res2
 end # function prepdepth
 
+"Assemble all RADI model parameters."
+function assemble(
+    depths::Array{Float64},
+    z_res::Float64,
+    dtPO4_w::Float64,
+    dO2_w::Float64,
+    T::Float64,
+    dbl::Float64,
+    rho_sw::Float64,
+    rho_pom::Float64,
+    Fpom::Float64,
+    phi0::Float64,
+    phiInf::Float64,
+    beta::Float64,
+    lambda_b::Float64,
+    lambda_i::Float64,
+)
+
+    # "Redfield" ratios and OM stoichiometry
+    RC, RN, RP = Params.redfield(dtPO4_w, rho_sw)
+    Mpom = Params.rmm_pom(RC, RN, RP)
+    Fpom_mol = Fpom/Mpom
+    Fpoc = Fpom_mol*RC
+
+    # Depth-dependent porosity
+    phi = Params.phi(phi0, phiInf, beta, depths)
+    phiS = Params.phiS(phi) # solid volume fraction
+    phiS_phi = phiS./phi
+    tort2 = Params.tort2(phi) # tortuosity squared from Boudreau (1996, GCA)
+    delta_phi = Params.delta_phi(phi0, phiInf, beta, depths)
+    delta_phiS = Params.delta_phiS(delta_phi)
+    delta_tort2i = Params.delta_tort2i(delta_phi, phi, tort2)
+    delta_tort2i_tort2 = delta_tort2i.*tort2
+
+    # Bioturbation (for solids)
+    D_bio_0 = Params.D_bio_0(Fpoc)
+    # ^[m2/a] surf bioturb coeff, Archer et al. (2002)
+    D_bio = Params.D_bio(depths, D_bio_0, lambda_b, dO2_w)
+    # ^[m2/a] bioturb coeff, Archer et al (2002)
+    delta_D_bio = Params.delta_D_bio(depths, D_bio, lambda_b)
+
+    # Organic matter degradation parameters
+    krefractory = Params.krefractory(depths, D_bio_0)
+    # ^[/a] from Archer et al (2002)
+
+    # Solid fluxes and solid initial conditions
+    x0 = Params.x0(Fpom, rho_pom, phiS[2])
+    # ^[m/a] bulk burial velocity at sediment-water interface
+    xinf = Params.xinf(x0, phiS[2], phiS[end-1])
+    # ^[m/a] bulk burial velocity at the infinite depth
+    u = Params.u(xinf, phi) # [m/a] porewater burial velocity
+    w = Params.w(xinf, phiS) # [m/a] solid burial velocity
+
+    # Biodiffusion depth-attenuation: see Boudreau (1996); Fiadeiro and Veronis
+    # (1977)
+    Peh = Params.Peh(w, z_res, D_bio)
+    # ^one half the cell Peclet number (Eq. 97 in Boudreau 1996)
+    # when Peh<<1, biodiffusion dominates, when Peh>>1, advection dominates
+    sigma = Params.sigma(Peh)
+    sigma1m = 1.0 .- sigma
+    sigma1p = 1.0 .+ sigma
+
+    # vvv NOT YET IN THE PARAMETERS PART OF THE DOCUMENTATION vvvvvvvvvvvvvvvvvv
+    # Temperature-dependent "free solution" diffusion coefficients
+    D_dO2 = Params.D_dO2(T)
+    # ^[m2/a] oxygen diffusion coefficient from Li and Gregory
+    D_dO2_tort2 = D_dO2./tort2
+
+    # Irrigation (for solutes)
+    alpha_0 = Params.alpha_0(Fpoc, dO2_w)
+    # ^[/a] from Archer et al (2002)
+    alpha = Params.alpha(alpha_0, depths, lambda_i)
+    # ^[/a] Archer et al (2002)
+
+    APPW = Params.APPW(w, delta_D_bio, delta_phiS, D_bio, phiS)
+    TR = Params.TR(z_res, tort2[2], dbl)
+    Fpoc_phiS_0 = Fpoc/phiS[2]
+    zr_Db_0 = 2.0z_res/D_bio[2]
+    # ^^^ NOT YET IN THE PARAMETERS PART OF THE DOCUMENTATION ^^^^^^^^^^^^^^^^^^
+
+    return Fpoc, phi, phiS, phiS_phi, tort2, delta_phi, delta_phiS,
+        delta_tort2i_tort2, D_bio, krefractory, u, w, sigma, sigma1m, sigma1p,
+        D_dO2_tort2, alpha, APPW, TR, Fpoc_phiS_0, zr_Db_0
+
+end # function assemble
+
 "Run the RADI model"
-function model(stoptime::Float64, interval::Float64, saveperXsteps::Int,
-    dO2_i::FloatOrArray, poc_i::FloatOrArray)
+function model(
+    stoptime::Float64,
+    interval::Float64,
+    saveperXsteps::Int,
+    dO2_i::FloatOrArray,
+    poc_i::FloatOrArray,
+)
 # ==============================================================================
 # === User inputs/settings =====================================================
 # ==============================================================================
@@ -75,13 +167,13 @@ T::Float64 = 1.4 # temperature / degC
 S::Float64 = 34.69 # practical salinity
 rho_sw::Float64 = gsw_rho(S, T, 1) # seawater density [kg/m^3]
 dO2_w::Float64 = 159.7e-6*rho_sw # dissolved oxygen [mol/m3]
-po4_w::Float64 = 2.39e-6*rho_sw # phosphate from GLODAP at station location,
-                                # bottom waters [mol/m3]
-dbl::Float64 = 1e-3 # thickness at location taken from Sulpis et al. 2018 PNAS [m]
+dtPO4_w::Float64 = 2.39e-6*rho_sw # phosphate from GLODAP at station location,
+                                  # bottom waters [mol/m3]
+dbl::Float64 = 1e-3 # [m] thickness at location from Sulpis et al. 2018 PNAS
 
 # Organic matter flux to the surface sediment
-Ftot::Float64 = 36.45 # flux of particulate organic matter to seafloor [g/m2/a]
-# Foc = 1.0 # flux of total organic carbon to the bottom [mol/m2/a]
+Fpom::Float64 = 36.45 # flux of particulate organic matter to seafloor [g/m2/a]
+# Fpoc = 1.0 # flux of total organic carbon to the bottom [mol/m2/a]
 rho_pom::Float64 = 2.65e6 # solid density [g/m3]
 
 # Sediment porosity
@@ -105,81 +197,11 @@ timesteps, savepoints, ntps, nsps = preptime(stoptime, interval, saveperXsteps)
 depths, ndepths, z_res2 = prepdepth(z_res, z_max)
 sp = 1 # initialise savepoints
 
-# "Redfield" ratios
-RC::Float64 = @. 1.0/(6.9e-3po4_w/(1e-6rho_sw) + 6e-3)
-# ^P:C computed as a function of SRP from Galbraith and Martiny PNAS 2015
-RN::Float64 = 11.0 # value at 60 degS from Martiny et al. Nat G 2013
-RP::Float64 = 1.0 # Redfield ratio for P in the deep sea
-M_CH2O::Float64 = 30.031 # g/mol
-M_NH3::Float64 = 17.031 # g/mol
-M_H3PO4::Float64 = 97.994 # g/mol
-# M_OM = @. M_CH2O + (RN/RC)*M_NH3 + (RP/RC)*M_H3PO4
-# # ^ Organic Matter molar mass [g of OM per mol of OC]
-M_POM::Float64 = RC*M_CH2O + RN*M_NH3 + RP*M_H3PO4 # molar mass of POM in g/mol
-Ftot_mol::Float64 = Ftot/M_POM
-Foc::Float64 = Ftot_mol*RC
-
-# Depth-dependent porosity
-phi::Array{Float64,1} = @. (phi0 - phiInf)*exp(-beta*depths) + phiInf
-phiS::Array{Float64,1} = 1.0 .- phi # solid volume fraction
-phiS_phi::Array{Float64,1} = phiS./phi
-tort2::Array{Float64,1} = @. 1.0 - 2.0log(phi)
-# ^tortuosity squared from Boudreau (1996, GCA)
-delta_phi::Array{Float64,1} = @. -beta*(phi0 - phiInf)*exp(-beta*depths)
-# delta_phi[2] = 0.0 # don't do this
-delta_phiS::Array{Float64,1} = -delta_phi
-delta_tort2i::Array{Float64,1} = @. 2.0delta_phi/(phi*tort2^2)
-delta_tort2_tort2::Array{Float64,1} = delta_tort2i.*tort2
-
-# Bioturbation (for solids)
-D_bio_0::Float64 = @. 0.0232e-4*(1e2Foc)^0.85
-# ^[m2/a] surf bioturb coeff, Archer et al. (2002)
-D_bio::Array{Float64,1} = @. D_bio_0*exp(-(depths/lambda_b)^2)*
-    dO2_w/(dO2_w + 0.02)
-# ^[m2/a] bioturb coeff, Archer et al (2002)
-delta_D_bio::Array{Float64,1} = @. -2.0depths*D_bio/lambda_b^2
-
-# Organic matter degradation parameters
-krefractory::Array{Float64,1} = @. 80.25D_bio_0*exp(-depths)
-# ^[/a] from Archer et al (2002)
-
-# Solid fluxes and solid initial conditions
-# Ftot = Foc.*M_OM # total sediment flux [g/m2/a]
-x0::Float64 = Ftot/(rho_pom*phiS[2])
-# ^[m/a] bulk burial velocity at sediment-water interface
-xinf::Float64 = x0*phiS[2]/phiS[end-1]
-# ^[m/a] bulk burial velocity at the infinite depth
-u::Array{Float64,1} = xinf*phi[end-1]./phi # [m/a] porewater burial velocity
-w::Array{Float64,1} = xinf*phiS[end-1]./phiS # [m/a] solid burial velocity
-
-# Biodiffusion depth-attenuation: see Boudreau (1996); Fiadeiro and Veronis
-# (1977)
-Peh::Array{Float64,1} = @. w*z_res/2.0D_bio
-# ^one half the cell Peclet number (Eq. 97 in Boudreau 1996)
-# when Peh<<1, biodiffusion dominates, when Peh>>1, advection dominates
-sigma::Array{Float64,1} = @. 1.0/tanh(Peh) - 1.0/(Peh) # Eq. 96 in Boudreau 1996
-# sigma[2] = 0.0 # don't do this
-sigma1m::Array{Float64,1} = 1.0 .- sigma
-sigma1p::Array{Float64,1} = 1.0 .+ sigma
-
-# vvv NOT YET IN THE PARAMETERS PART OF THE DOCUMENTATION vvvvvvvvvvvvvvvvvvvvvv
-# Temperature-dependent "free solution" diffusion coefficients
-D_dO2::Float64 = @. 0.034862 + 0.001409T
-# ^[m2/a] oxygen diffusion coefficient from Li and Gregory
-D_dO2_tort2::Array{Float64,1} = D_dO2./tort2
-
-# Irrigation (for solutes)
-alpha_0::Float64 = @. 11.0*(atan((1e2Foc*5.0 - 400.0)/400.0)/pi + 0.5) - 0.9 +
-    20.0*(dO2_w/(dO2_w + 0.01))*exp(-dO2_w/0.01)*1e2Foc/(1e2Foc + 30.0)
-# ^[/a] from Archer et al (2002)
-alpha::Array{Float64,1} = @. alpha_0*exp(-(depths/lambda_i)^2)
-# ^[/a] Archer et al (2002) the depth of 5 cm was changed
-
-APPW::Array{Float64,1} = @. w - delta_D_bio - delta_phiS*D_bio/phiS
-TR::Float64 = 2.0z_res*tort2[2]/dbl
-Foc_phiS_0::Float64 = Foc/phiS[2]
-zr_Db_0::Float64 = 2.0z_res/D_bio[2]
-# ^^^ NOT YET IN THE PARAMETERS PART OF THE DOCUMENTATION ^^^^^^^^^^^^^^^^^^^^^^
+Fpoc, phi, phiS, phiS_phi, tort2, delta_phi, delta_phiS, delta_tort2i_tort2,
+        D_bio, krefractory, u, w, sigma, sigma1m, sigma1p, D_dO2_tort2, alpha,
+        APPW, TR, Fpoc_phiS_0, zr_Db_0 =
+    assemble(depths, z_res, dtPO4_w, dO2_w, T, dbl, rho_sw, rho_pom, Fpom,
+        phi0, phiInf, beta, lambda_b, lambda_i)
 
 "Prepare Solute with a constant start value."
 function makeSolute(var_start::Float64, above::Float64, D_var::Array{Float64})
@@ -233,7 +255,7 @@ end # function surfacesolute
 
 "Calculate the above-surface value for a solid."
 function surfacesolid(then::Array{Float64,1})
-    return then[3] + (Foc_phiS_0 - w[2]*then[2])*zr_Db_0
+    return then[3] + (Fpoc_phiS_0 - w[2]*then[2])*zr_Db_0
 end # function surfacesolid
 
 "Calculate the below-bottom value for a solid or solute."
@@ -260,16 +282,16 @@ end # function react!
 
 "Calculate advection rate for a solute."
 function advectsolute(then_z1p::Float64, then_z1m::Float64, u_z::Float64,
-        delta_phi_z::Float64, phi_z::Float64, delta_tort2_tort2_z::Float64,
+        delta_phi_z::Float64, phi_z::Float64, delta_tort2i_tort2_z::Float64,
         D_var::Float64)
     return -(u_z - delta_phi_z*D_var/phi_z -
-        D_var*delta_tort2_tort2_z)*(then_z1p - then_z1m)/(2.0z_res)
+        D_var*delta_tort2i_tort2_z)*(then_z1p - then_z1m)/(2.0z_res)
 end # function advect
 
 "Advect a Solute."
 function advect!(z::Int, var::Solute)
     var.now[z] += interval*advectsolute(var.then[z+1], var.then[z-1], u[z],
-        delta_phi[z], phi[z], delta_tort2_tort2[z], var.dvar[z])
+        delta_phi[z], phi[z], delta_tort2i_tort2[z], var.dvar[z])
 end # function advect!
 
 "Calculate advection rate for a solid."
