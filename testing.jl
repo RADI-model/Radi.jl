@@ -21,7 +21,7 @@ oxy_i = oxy_w*2/3
 poc_i = 1e4
 
 function radiplot(oxy_i, poc_i)
-    @time depths, oxy, poc, axy, pac = RADI.model(stoptime, interval,
+    @time depths, oxy, poc = RADI.model(stoptime, interval,
         saveperXsteps, oxy_i, poc_i)
     ntps = size(oxy)[2]
     cmap = colormap("RdBu", ntps)
@@ -33,18 +33,18 @@ function radiplot(oxy_i, poc_i)
         plot!(p2, depths*100, poc[:, sp], legend=false, c=cmap[cs-sp+1])
     end # for sp
     plot(p1, p2, layout=(2, 1))
-    return depths, oxy, poc, axy, pac
+    return depths, oxy, poc
 end # function radiplot
 
 showprofile = false
 if showprofile
     Profile.clear()
-    @profile depths, oxy, poc, axy, pac = RADI.model(stoptime, interval,
+    @profile depths, oxy, poc = RADI.model(stoptime, interval,
         saveperXsteps, oxy_i, poc_i)
     ProfileView.view()
     RADI.say_RADI()
 else
-    depths, oxy, poc, axy, pac = radiplot(oxy_i, poc_i)
+    depths, oxy, poc = radiplot(oxy_i, poc_i)
 end
 
 # using Base.SimdLoop
