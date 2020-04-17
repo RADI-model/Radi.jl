@@ -91,8 +91,13 @@ function sigma(w::Array{Float64}, z_res::Float64, D_bio::Array{Float64})
     return sigma(Peh(w, z_res, D_bio))
 end # function sigma
 
-"Calculate T-dependent 'free solution' diffusion coeff. for O2."
+"Calculate T-dependent 'free solution' diffusion coeff. for O2 in m^2/a."
 D_dO2(T::Float64) = 0.034862 + 0.001409T
+
+"""Calculate T-dependent 'free solution' diffusion coeff. for tCO2 in m^2/a.
+approximted to bicarbonate diffusion coefficient from Hulse et al (2018).
+"""
+D_dtCO2(T::Float64) = 0.015169 + 0.000793T
 
 "Calculate alpha_0 parameter for irrigation (Archer et al. 2002)."
 function alpha_0(Fpoc::Float64, dO2_w::Float64)
