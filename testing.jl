@@ -40,6 +40,9 @@ dtPO4_w = 2.39e-6rho_sw # total phosphate / mol/m^3
 
 # Define organic matter flux to the surface sediment
 Fpom = 36.45 # flux of POM to seafloor / g/m^2/a
+Fpom_r = 0.15 # refractory fraction of POM
+Fpom_s = 0.15 # slow-degrading fraction of POM
+Fpom_f = 0.7 # fast-degrading fraction of POM
 rho_pom = 2.65e6 # solid POM density / g/m^3
 
 # Define initial conditions within the sediment (scalars or arrays)
@@ -50,8 +53,8 @@ pfoc_i = 0.0 # fast-degrading particulate organic carbon / unit?
 function radiplot(dO2_i, dtCO2_i, pfoc_i)
     @time depths, dO2, dtCO2, pfoc = RADI.model(stoptime, interval,
         saveperXsteps, z_max, z_res, dbl, phiInf, phi0, beta, lambda_b,
-        lambda_i, T, S, P, dO2_w, dtCO2_w, dtPO4_w, Fpom, rho_pom, dO2_i,
-        dtCO2_i, pfoc_i)
+        lambda_i, T, S, P, dO2_w, dtCO2_w, dtPO4_w, Fpom, Fpom_r, Fpom_s,
+        Fpom_f,rho_pom, dO2_i, dtCO2_i, pfoc_i)
     ntps = size(dO2)[2]
     cmap = colormap("RdBu", ntps)
     cs = ntps

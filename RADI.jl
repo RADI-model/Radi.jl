@@ -59,6 +59,30 @@ function prepdepth(depth_res::Float64, depth_max::Float64)
     return depths, ndepths, depth_res2
 end # function prepdepth
 
+"Assemble depth-dependent porosity parameters."
+function porosity(phi0::Float64, phiInf::Float64, beta::Float64,
+        depths::Array{Float64})
+    phi = Params.phi(phi0, phiInf, beta, depths)
+    phiS = Params.phiS(phi) # solid volume fraction
+    phiS_phi = phiS./phi
+    tort2 = Params.tort2(phi) # tortuosity squared from Boudreau (1996, GCA)
+    delta_phi = Params.delta_phi(phi0, phiInf, beta, depths)
+    delta_phiS = Params.delta_phiS(delta_phi)
+    delta_tort2i = Params.delta_tort2i(delta_phi, phi, tort2)
+    delta_tort2i_tort2 = delta_tort2i.*tort2
+    return phi, phiS, phiS_phi, tort2, delta_phi, delta_phiS, delta_tort2i_tort2
+end # function porosity
+
+"Define 'Redfield' ratios and OM stoichiometry."
+function stoichiometry(T::Float64, S::Float64, P::Float64, dtPO4_w::Float64,
+        Fpom::Float64)
+    rho_sw = gsw_rho(S, T, P) # seawater density [kg/m^3]
+    RC, RN, RP = Params.redfield(dtPO4_w, rho_sw)
+    Mpom = Params.rmm_pom(RC, RN, RP)
+    Fpom_mol = Fpom/Mpom
+    Fpoc = Fpom_mol*RC
+end # function stoichiometry
+
 "Assemble all RADI model parameters."
 function assemble(
     depths::Array{Float64},
@@ -71,29 +95,14 @@ function assemble(
     dbl::Float64,
     Fpom::Float64,
     rho_pom::Float64,
-    phi0::Float64,
-    phiInf::Float64,
-    beta::Float64,
     lambda_b::Float64,
     lambda_i::Float64,
+    phi::Array{Float64},
+    phiS::Array{Float64},
+    delta_phiS::Array{Float64},
+    tort2::Array{Float64},
+    Fpoc::Float64,
 )
-
-    # "Redfield" ratios and OM stoichiometry
-    rho_sw = gsw_rho(S, T, P) # seawater density [kg/m^3]
-    RC, RN, RP = Params.redfield(dtPO4_w, rho_sw)
-    Mpom = Params.rmm_pom(RC, RN, RP)
-    Fpom_mol = Fpom/Mpom
-    Fpoc = Fpom_mol*RC
-
-    # Depth-dependent porosity
-    phi = Params.phi(phi0, phiInf, beta, depths)
-    phiS = Params.phiS(phi) # solid volume fraction
-    phiS_phi = phiS./phi
-    tort2 = Params.tort2(phi) # tortuosity squared from Boudreau (1996, GCA)
-    delta_phi = Params.delta_phi(phi0, phiInf, beta, depths)
-    delta_phiS = Params.delta_phiS(delta_phi)
-    delta_tort2i = Params.delta_tort2i(delta_phi, phi, tort2)
-    delta_tort2i_tort2 = delta_tort2i.*tort2
 
     # Bioturbation (for solids)
     D_bio_0 = Params.D_bio_0(Fpoc)
@@ -142,8 +151,7 @@ function assemble(
     zr_Db_0 = 2.0z_res/D_bio[2]
     # ^^^ NOT YET IN THE PARAMETERS PART OF THE DOCUMENTATION ^^^^^^^^^^^^^^^^^^
 
-    return Fpoc, phi, phiS, phiS_phi, tort2, delta_phi, delta_phiS,
-        delta_tort2i_tort2, D_bio, krefractory, u, w, sigma, sigma1m, sigma1p,
+    return D_bio, krefractory, u, w, sigma, sigma1m, sigma1p,
         D_dO2_tort2, D_dtCO2_tort2, alpha, APPW, TR, Fpoc_phiS_0, zr_Db_0
 
 end # function assemble
@@ -168,6 +176,9 @@ function model(
     dtCO2_w::Float64,
     dtPO4_w::Float64,
     Fpom::Float64,
+    Fpom_r::Float64,
+    Fpom_s::Float64,
+    Fpom_f::Float64,
     rho_pom::Float64,
     dO2_i::FloatOrArray,
     dtCO2_i::FloatOrArray,
@@ -180,11 +191,14 @@ depths, ndepths, z_res2 = prepdepth(z_res, z_max)
 sp = 1 # initialise savepoints
 
 # Assemble model parameters
-Fpoc, phi, phiS, phiS_phi, tort2, delta_phi, delta_phiS, delta_tort2i_tort2,
-        D_bio, krefractory, u, w, sigma, sigma1m, sigma1p, D_dO2_tort2,
+phi, phiS, phiS_phi, tort2, delta_phi, delta_phiS, delta_tort2i_tort2 =
+    porosity(phi0, phiInf, beta, depths)
+Fpoc = stoichiometry(T, S, P, dtPO4_w, Fpom)
+
+D_bio, krefractory, u, w, sigma, sigma1m, sigma1p, D_dO2_tort2,
         D_dtCO2_tort2, alpha, APPW, TR, Fpoc_phiS_0, zr_Db_0 =
     assemble(depths, z_res, dtPO4_w, dO2_w, T, S, P, dbl, Fpom, rho_pom,
-        phi0, phiInf, beta, lambda_b, lambda_i)
+        lambda_b, lambda_i, phi, phiS, delta_phiS, tort2, Fpoc)
 
 "Prepare Solute with a constant start value."
 function makeSolute(var_start::Float64, above::Float64, D_var::Array{Float64})
