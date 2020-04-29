@@ -83,79 +83,6 @@ function stoichiometry(T::Float64, S::Float64, P::Float64, dtPO4_w::Float64,
     Fpoc = Fpom_mol*RC
 end # function stoichiometry
 
-"Assemble all RADI model parameters."
-function assemble(
-    depths::Array{Float64},
-    z_res::Float64,
-    dtPO4_w::Float64,
-    dO2_w::Float64,
-    T::Float64,
-    S::Float64,
-    P::Float64,
-    dbl::Float64,
-    Fpom::Float64,
-    rho_pom::Float64,
-    lambda_b::Float64,
-    lambda_i::Float64,
-    phi::Array{Float64},
-    phiS::Array{Float64},
-    delta_phiS::Array{Float64},
-    tort2::Array{Float64},
-    Fpoc::Float64,
-)
-
-    # Bioturbation (for solids)
-    D_bio_0 = Params.D_bio_0(Fpoc)
-    # ^[m2/a] surf bioturb coeff, Archer et al. (2002)
-    D_bio = Params.D_bio(depths, D_bio_0, lambda_b, dO2_w)
-    # ^[m2/a] bioturb coeff, Archer et al (2002)
-    delta_D_bio = Params.delta_D_bio(depths, D_bio, lambda_b)
-
-    # Organic matter degradation parameters
-    krefractory = Params.krefractory(depths, D_bio_0)
-    # ^[/a] from Archer et al (2002)
-
-    # Solid fluxes and solid initial conditions
-    x0 = Params.x0(Fpom, rho_pom, phiS[2])
-    # ^[m/a] bulk burial velocity at sediment-water interface
-    xinf = Params.xinf(x0, phiS[2], phiS[end-1])
-    # ^[m/a] bulk burial velocity at the infinite depth
-    u = Params.u(xinf, phi) # [m/a] porewater burial velocity
-    w = Params.w(xinf, phiS) # [m/a] solid burial velocity
-
-    # Biodiffusion depth-attenuation: see Boudreau (1996); Fiadeiro and Veronis
-    # (1977)
-    Peh = Params.Peh(w, z_res, D_bio)
-    # ^one half the cell Peclet number (Eq. 97 in Boudreau 1996)
-    # when Peh<<1, biodiffusion dominates, when Peh>>1, advection dominates
-    sigma = Params.sigma(Peh)
-    sigma1m = 1.0 .- sigma
-    sigma1p = 1.0 .+ sigma
-
-    # vvv NOT YET IN THE PARAMETERS PART OF THE DOCUMENTATION vvvvvvvvvvvvvvvvvv
-    # Temperature-dependent "free solution" diffusion coefficients
-    D_dO2 = Params.D_dO2(T)
-    D_dtCO2 = Params.D_dtCO2(T)
-    D_dO2_tort2 = D_dO2./tort2
-    D_dtCO2_tort2 = D_dtCO2./tort2
-
-    # Irrigation (for solutes)
-    alpha_0 = Params.alpha_0(Fpoc, dO2_w)
-    # ^[/a] from Archer et al (2002)
-    alpha = Params.alpha(alpha_0, depths, lambda_i)
-    # ^[/a] Archer et al (2002)
-
-    APPW = Params.APPW(w, delta_D_bio, delta_phiS, D_bio, phiS)
-    TR = Params.TR(z_res, tort2[2], dbl)
-    Fpoc_phiS_0 = Fpoc/phiS[2]
-    zr_Db_0 = 2.0z_res/D_bio[2]
-    # ^^^ NOT YET IN THE PARAMETERS PART OF THE DOCUMENTATION ^^^^^^^^^^^^^^^^^^
-
-    return D_bio, krefractory, u, w, sigma, sigma1m, sigma1p,
-        D_dO2_tort2, D_dtCO2_tort2, alpha, APPW, TR, Fpoc_phiS_0, zr_Db_0
-
-end # function assemble
-
 "Run the RADI model"
 function model(
     stoptime::Float64,
@@ -190,15 +117,63 @@ timesteps, savepoints, ntps, nsps = preptime(stoptime, interval, saveperXsteps)
 depths, ndepths, z_res2 = prepdepth(z_res, z_max)
 sp = 1 # initialise savepoints
 
-# Assemble model parameters
+# Depth-dependent porosity
 phi, phiS, phiS_phi, tort2, delta_phi, delta_phiS, delta_tort2i_tort2 =
     porosity(phi0, phiInf, beta, depths)
-Fpoc = stoichiometry(T, S, P, dtPO4_w, Fpom)
 
-D_bio, krefractory, u, w, sigma, sigma1m, sigma1p, D_dO2_tort2,
-        D_dtCO2_tort2, alpha, APPW, TR, Fpoc_phiS_0, zr_Db_0 =
-    assemble(depths, z_res, dtPO4_w, dO2_w, T, S, P, dbl, Fpom, rho_pom,
-        lambda_b, lambda_i, phi, phiS, delta_phiS, tort2, Fpoc)
+# Define 'Redfield' ratios and OM stoichiometry
+rho_sw = gsw_rho(S, T, P) # seawater density [kg/m^3]
+RC, RN, RP = Params.redfield(dtPO4_w, rho_sw)
+Mpom = Params.rmm_pom(RC, RN, RP)
+Fpom_mol = Fpom/Mpom
+Fpoc = Fpom_mol*RC
+
+# Bioturbation (for solids)
+D_bio_0 = Params.D_bio_0(Fpoc)
+# ^[m2/a] surf bioturb coeff, Archer et al. (2002)
+D_bio = Params.D_bio(depths, D_bio_0, lambda_b, dO2_w)
+# ^[m2/a] bioturb coeff, Archer et al (2002)
+delta_D_bio = Params.delta_D_bio(depths, D_bio, lambda_b)
+
+# Organic matter degradation parameters
+krefractory = Params.krefractory(depths, D_bio_0)
+# ^[/a] from Archer et al (2002)
+
+# Solid fluxes and solid initial conditions
+x0 = Params.x0(Fpom, rho_pom, phiS[2])
+# ^[m/a] bulk burial velocity at sediment-water interface
+xinf = Params.xinf(x0, phiS[2], phiS[end-1])
+# ^[m/a] bulk burial velocity at the infinite depth
+u = Params.u(xinf, phi) # [m/a] porewater burial velocity
+w = Params.w(xinf, phiS) # [m/a] solid burial velocity
+
+# Biodiffusion depth-attenuation: see Boudreau (1996); Fiadeiro and Veronis
+# (1977)
+Peh = Params.Peh(w, z_res, D_bio)
+# ^one half the cell Peclet number (Eq. 97 in Boudreau 1996)
+# when Peh<<1, biodiffusion dominates, when Peh>>1, advection dominates
+sigma = Params.sigma(Peh)
+sigma1m = 1.0 .- sigma
+sigma1p = 1.0 .+ sigma
+
+# vvv NOT YET IN THE PARAMETERS PART OF THE DOCUMENTATION vvvvvvvvvvvvvvvvvv
+# Temperature-dependent "free solution" diffusion coefficients
+D_dO2 = Params.D_dO2(T)
+D_dtCO2 = Params.D_dtCO2(T)
+D_dO2_tort2 = D_dO2./tort2
+D_dtCO2_tort2 = D_dtCO2./tort2
+
+# Irrigation (for solutes)
+alpha_0 = Params.alpha_0(Fpoc, dO2_w)
+# ^[/a] from Archer et al (2002)
+alpha = Params.alpha(alpha_0, depths, lambda_i)
+# ^[/a] Archer et al (2002)
+
+APPW = Params.APPW(w, delta_D_bio, delta_phiS, D_bio, phiS)
+TR = Params.TR(z_res, tort2[2], dbl)
+Fpoc_phiS_0 = Fpoc/phiS[2]
+zr_Db_0 = 2.0z_res/D_bio[2]
+# ^^^ NOT YET IN THE PARAMETERS PART OF THE DOCUMENTATION ^^^^^^^^^^^^^^^^^^
 
 "Prepare Solute with a constant start value."
 function makeSolute(var_start::Float64, above::Float64, D_var::Array{Float64})
