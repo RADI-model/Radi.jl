@@ -117,6 +117,8 @@ function model(
     proc_i::FloatOrArray,
 )
 
+println("RADI preparing to run...")
+
 # Set up model time and depth grids
 timesteps, savepoints, ntps, nsps = preptime(stoptime, interval, saveperXsteps)
 depths, ndepths, z_res2 = prepdepth(z_res, z_max)
@@ -385,7 +387,7 @@ for t in 1:ntps
             psoc.save[z-1, sp+1] = psoc.now[z]
             proc.save[z-1, sp+1] = proc.now[z]
             if z == ndepths-1
-                println("RADI: reached savepoint $sp (step $t of $ntps)...")
+                println("RADI reached savepoint $sp (step $t of $ntps)...")
                 sp += 1
             end  # if
         end  # if
@@ -400,14 +402,32 @@ for t in 1:ntps
     end  # for z in 2:(ndepths-1)
 end  # for t, main RADI model loop
 # ===== End of main model loop =================================================
+println("RADI done!")
 return depths[2:end-1], dO2.save, dtCO2.save, pfoc.save, psoc.save, proc.save
 end  # function model
-
-say_RADI() = println("RADI done!")
 
 "Calculate how far from equilibrium the sediment column is."
 function disequilibrium(dO2, pfoc)
     return dO2, pfoc
 end  # function disequilibrium
+
+say_RADI() = print(raw"""
+
+      ██▀███   ▄▄▄      ▓█████▄  ██▓
+      ▓██ ▒ ██▒▒████▄    ▒██▀ ██▌▓██▒
+      ▓██ ░▄█ ▒▒██  ▀█▄  ░██   █▌▒██▒
+      ▒██▀▀█▄  ░██▄▄▄▄██ ░▓█▄   ▌░██░
+      ░██▓ ▒██▒ ▓█   ▓██▒░▒████▓ ░██░
+      ░ ▒▓ ░▒▓░ ▒▒   ▓▒█░ ▒▒▓  ▒ ░▓
+       ░▒ ░ ▒░  ▒   ▒▒ ░ ░ ▒  ▒  ▒ ░
+       ░░   ░   ░   ▒    ░ ░  ░  ▒ ░
+        ░           ░  ░   ░     ░
+                         ░
+
+     “What do I know of man's destiny?
+   I could tell you more about radishes.”
+                  -- Samuel Beckett
+
+""")
 
 end  # module RADI

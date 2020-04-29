@@ -51,6 +51,7 @@ function radiplot(dO2_i, dtCO2_i, pfoc_i, psoc_i, proc_i)
     return depths, dO2, dtCO2, pfoc, psoc, proc
 end # function radiplot
 
+RADI.say_RADI()
 depths, dO2, dtCO2, pfoc, psoc, proc = radiplot(dO2_i, dtCO2_i,
     pfoc_i, psoc_i, proc_i)
 
