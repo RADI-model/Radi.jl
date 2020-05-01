@@ -35,6 +35,6 @@ rho_pom = 2.65e6  # solid POM density / g/m^3
 # Define initial conditions within the sediment (scalars or arrays)
 dO2_i = dO2_w*2/3  # dissolved oxygen / mol/m^3
 dtCO2_i = dtCO2_w*0.999  # dissolved inorganic carbon / mol/m^3
-pfoc_i = 3e4  # fast-degrading particulate organic carbon / unit?
+pfoc_i = 3e2  # fast-degrading particulate organic carbon / unit?
 psoc_i = 3e3  # slow-degrading particulate organic carbon / unit?
-proc_i = 3e2  # refractory particulate organic carbon / unit?
+proc_i = 3e4  # refractory particulate organic carbon / unit?
