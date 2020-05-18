@@ -7,9 +7,9 @@ include("gsw_rho.jl")
 include("Model.jl")
 
 # Define model timesteps (all times in years)
-stoptime = 50.0  # how long to run for
+stoptime = 50.0/128000  # how long to run for
 interval = 5/128000  # duration of each model timestep
-saveperXsteps = 128000  # save results in intervals of this many timesteps
+saveperXsteps = 1#28000  # save results in intervals of this many timesteps
 
 # Import site-specific settings
 include("IC_W29.jl")

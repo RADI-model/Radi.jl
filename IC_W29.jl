@@ -26,15 +26,15 @@ dtCO2_w = 2324e-6rho_sw  # dissolved inorganic carbon / mol/m^3
 dtPO4_w = 2.39e-6rho_sw  # total phosphate / mol/m^3
 
 # Define organic matter flux to the surface sediment
-Fpom = 36.45  # flux of POM to seafloor / g/m^2/a
+Fpom = 3.645  # flux of POM to seafloor / g/m^2/a
 Fpom_r = 0.15  # refractory fraction of POM
 Fpom_s = 0.15  # slow-degrading fraction of POM
 Fpom_f = 0.7  # fast-degrading fraction of POM
 rho_pom = 2.65e6  # solid POM density / g/m^3
 
 # Define initial conditions within the sediment (scalars or arrays)
-dO2_i = dO2_w*2/3  # dissolved oxygen / mol/m^3
-dtCO2_i = dtCO2_w*0.999  # dissolved inorganic carbon / mol/m^3
+dO2_i = dO2_w  # dissolved oxygen / mol/m^3
+dtCO2_i = dtCO2_w  # dissolved inorganic carbon / mol/m^3
 pfoc_i = 3e2  # fast-degrading particulate organic carbon / unit?
 psoc_i = 3e3  # slow-degrading particulate organic carbon / unit?
 proc_i = 3e4  # refractory particulate organic carbon / unit?

@@ -259,7 +259,7 @@ function substitute!(var::Solid)
 end  # function substitute!
 
 "React a Solute or Solid."
-function react!(z::Int, var::SolidOrSolute, rate::Float64)
+function react!(var::SolidOrSolute, z::Int, rate::Float64)
     var.now[z] += interval*rate
 end  # function react!
 
@@ -272,7 +272,7 @@ function advectsolute(then_z1p::Float64, then_z1m::Float64, u_z::Float64,
 end  # function advect
 
 "Advect a Solute."
-function advect!(z::Int, var::Solute)
+function advect!(var::Solute, z::Int)
     var.now[z] += interval*advectsolute(var.then[z+1], var.then[z-1], u[z],
         delta_phi[z], phi[z], delta_tort2i_tort2[z], var.dvar[z])
 end  # function advect!
@@ -286,7 +286,7 @@ function advectsolid(then_z::Float64, then_z1p::Float64, then_z1m::Float64,
 end  # function advectsolid
 
 "Advect a Solid."
-function advect!(z::Int, var::Solid)
+function advect!(var::Solid, z::Int)
     var.now[z] += interval*-APPW[z]*(sigma1m[z]*var.then[z+1] +
         2.0sigma[z]*var.then[z] - sigma1p[z]*var.then[z-1])/(2.0z_res)
 # No idea why the approach below is so much slower, only for this function?!
@@ -301,7 +301,7 @@ function diffuse(then_z1m::Float64, then_z::Float64, then_z1p::Float64,
 end  # function diffuse
 
 "Diffuse a Solute or Solid."
-function diffuse!(z::Int, var::SolidOrSolute)
+function diffuse!(var::SolidOrSolute, z::Int)
     var.now[z] += interval*diffuse(var.then[z-1], var.then[z], var.then[z+1],
         var.dvar[z])
 end  # function diffuse!
@@ -312,7 +312,7 @@ function irrigate(then_z::Float64, above::Float64, alpha_z::Float64)
 end  # function irrigate
 
 "Irrigate a Solute throughout the sediment."
-function irrigate!(z::Int, var::Solute)
+function irrigate!(var::Solute, z::Int)
     var.now[z] += interval*irrigate(var.then[z], var.above, alpha[z])
 end  # function irrigate!
 
@@ -336,20 +336,20 @@ for t in 1:ntps
     # ~~~ BEGIN SEDIMENT PROCESSING ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         # --- First, do all the physical processes -----------------------------
         # Dissolved oxygen (solute)
-        advect!(z, dO2)
-        diffuse!(z, dO2)
-        irrigate!(z, dO2)
+        advect!(dO2, z)
+        diffuse!(dO2, z)
+        irrigate!(dO2, z)
         # Dissolved inorganic carbon (solute)
-        advect!(z, dtCO2)
-        diffuse!(z, dtCO2)
-        irrigate!(z, dtCO2)
+        advect!(dtCO2, z)
+        diffuse!(dtCO2, z)
+        irrigate!(dtCO2, z)
         # Particulate organic carbon, fast-slow-refractory (solid)
-        advect!(z, pfoc)
-        diffuse!(z, pfoc)
-        advect!(z, psoc)
-        diffuse!(z, psoc)
-        advect!(z, proc)
-        diffuse!(z, proc)
+        advect!(pfoc, z)
+        diffuse!(pfoc, z)
+        advect!(psoc, z)
+        diffuse!(psoc, z)
+        advect!(proc, z)
+        diffuse!(proc, z)
         # --- Then do the reactions! -------------------------------------------
         # Calculate maximum reaction rates based on previous timestep
         R_pfoc = -pfoc.then[z]*kfast[z]
@@ -363,21 +363,21 @@ for t in 1:ntps
             _Rf = R_pfoc/(R_pfoc + R_psoc)
             R_pfoc = _Rf*R_dO2/phiS_phi[z]
             R_psoc = (1.0 - _Rf)*R_dO2/phiS_phi[z]
-        end  # if
+        end
         if pfoc.now[z] + interval*R_pfoc < 0.0  # too much fast-POC used
             R_pfoc = -pfoc.now[z]/interval
             R_dO2 = phiS_phi[z]*(R_pfoc + R_psoc)
-        end  # if
+        end
         if psoc.now[z] + interval*R_psoc < 0.0  # too much slow-POC used
             R_psoc = -psoc.now[z]/interval
             R_dO2 = phiS_phi[z]*(R_pfoc + R_psoc)
-        end  # if
+        end
         R_dtCO2 = -phiS_phi[z]*(R_pfoc + R_psoc)
-        react!(z, dO2, R_dO2)
-        react!(z, dtCO2, R_dtCO2)
-        react!(z, pfoc, R_pfoc)
-        react!(z, psoc, R_psoc)
-        # react!(z, proc, 0.0)  # refractory means it doesn't react!
+        react!(dO2, z, R_dO2)
+        react!(dtCO2, z, R_dtCO2)
+        react!(pfoc, z, R_pfoc)
+        react!(psoc, z, R_psoc)
+        # react!(proc, z, 0.0)  # "refractory" means it doesn't react!
     # ~~~ END SEDIMENT PROCESSING ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         # Save output if we are at a savepoint
         if tsave
@@ -389,8 +389,8 @@ for t in 1:ntps
             if z == ndepths-1
                 println("RADI reached savepoint $sp (step $t of $ntps)...")
                 sp += 1
-            end  # if
-        end  # if
+            end
+        end
     end  # for z in 2:(ndepths-1)
     # Copy results into "previous step" arrays
     @simd for z in 2:(ndepths-1)
@@ -430,4 +430,4 @@ sayhello() = print(raw"""
 
 """)
 
-end  # module RADI
+end  # module Radi
