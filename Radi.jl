@@ -1,4 +1,4 @@
-module radi
+module Radi
 
 using Colors, Plots
 Plots.default(show=true)
@@ -82,4 +82,4 @@ Model.sayhello()
 depths, dO2, dtCO2, pfoc, psoc, proc = profiles(dO2_i, dtCO2_i,
     pfoc_i, psoc_i, proc_i)
 
-end  # module radi
+end  # module Radi
