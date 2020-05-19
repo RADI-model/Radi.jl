@@ -458,30 +458,90 @@ for t in 1:ntps
         advect!(pMnO2, z)
         diffuse!(pMnO2, z)
         # --- Then do the reactions! -------------------------------------------
+        # Monod scheme inhibition factors
+        Mi_dO2 = KMi_dO2 / (KMi_dO2 + dO2.then[z])
+        Mi_dtNO3 = KMi_dtNO3 / (KMi_dtNO3 + dtNO3.then[z])
+        Mi_pMnO2 = KMi_pMnO2 / (KMi_pMnO2 + pMnO2.then[z])
+        Mi_pFeOH3 = KMi_pFeOH3 / (KMi_pFeOH3 + pFeOH3.then[z])
+        Mi_dtSO4 = KMi_dtSO4 / (KMi_dtSO4 + dtSO4.then[z])
+        # Organic matter respiration pathway factors
+        # From the code of Couture et al. (EST 2010), following Boudreau (1996)
+        fdO2 = dO2.then[z] / (KM_dO2 + dO2.then[z])
+        fdtNO3 = Mi_dO2 *
+            dtNO3.then[z] / (KM_dtNO3 + dtNO3.then[z])
+        fpMnO2 = Mi_dO2 * Mi_dtNO3 *
+            pMnO2.then[z] / (KM_pMnO2 + pMnO2.then[z])
+        fpFeOH3 = Mi_dO2 * Mi_dtNO3 * Mi_pMnO2 *
+            pFeOH3.then[z] / (KM_pFeOH3 + pFeOH3.then[z])
+        fdtSO4 = Mi_dO2 * Mi_dtNO3 * Mi_pMnO2 * Mi_pFeOH3 *
+            dtSO4.then[z] / (KM_dtSO4 + dtSO4.then[z])
+        fdCH4 = Mi_dO2 * Mi_dtNO3 * Mi_pMnO2 * Mi_pFeOH3 * KMi_dtSO4
+	    fox = fdO2 + fdtNO3 + fpMnO2 + fpFeOH3 + fdtSO4 + fdCH4        
         # Calculate maximum reaction rates based on previous timestep
-        R_pfoc = -pfoc.then[z]*kfast[z]
-        R_psoc = -psoc.then[z]*kslow[z]
-        R_dO2 = phiS_phi[z]*(R_pfoc + R_psoc)
+        R_pfoc_O2 = -pfoc.then[z] * kfast[z] * fdO2
+        R_psoc_O2 = -psoc.then[z] * kslow[z] * fdO2
+        R_pfoc_NO3 = -pfoc.then[z] * kfast[z] * fdtNO3
+        R_psoc_NO3 = -psoc.then[z] * kslow[z] * fdtNO3
+        R_pfoc = R_pfoc_O2 + R_pfoc_NO3
+        R_psoc = R_psoc_O2 + R_psoc_NO3
+        R_dO2 = phiS_phi[z] * (R_pfoc_O2 + R_psoc_O2)
+        R_dtNO3 = 0.8phiS_phi[z] * (R_pfoc_NO3 + R_psoc_NO3)# + RNHox
         # Check maximum reaction rates are possible after other processes have
         # acted in this timestep, and correct them if not
         if dO2.now[z] + interval*R_dO2 < 0.0  # too much O2 used
-            R_dO2 = -dO2.now[z]/interval
+            R_dO2 = -dO2.now[z] / interval
             # Determine fPOC/sPOC on the basis of their original rate ratio
-            _Rf = R_pfoc/(R_pfoc + R_psoc)
-            R_pfoc = _Rf*R_dO2/phiS_phi[z]
-            R_psoc = (1.0 - _Rf)*R_dO2/phiS_phi[z]
+            _Rf = R_pfoc_O2/(R_pfoc_O2 + R_psoc_O2)
+            R_pfoc_O2 = _Rf*R_dO2/phiS_phi[z]
+            R_psoc_O2 = (1.0 - _Rf)*R_dO2/phiS_phi[z]
+            # Update others with new values
+            R_pfoc = R_pfoc_O2 + R_pfoc_NO3
+            R_psoc = R_psoc_O2 + R_psoc_NO3
+            R_dO2 = phiS_phi[z]*(R_pfoc_O2 + R_psoc_O2)
+        end
+        if dtNO3.now[z] + interval*R_dtNO3 < 0.0  # too much NO3 used
+            R_dtNO3 = -dtNO3.now[z] / interval
+            # Determine fPOC/sPOC on the basis of their original rate ratio
+            _Rf = R_pfoc_NO3 / (R_pfoc_NO3 + R_psoc_NO3)
+            R_pfoc_NO3 = _Rf * R_dtNO3 / 0.8phiS_phi[z]
+            R_psoc_NO3 = (1.0 - _Rf) * R_dtNO3 / 0.8phiS_phi[z]
+            # Update others with new values
+            R_pfoc = R_pfoc_O2 + R_pfoc_NO3
+            R_psoc = R_psoc_O2 + R_psoc_NO3
+            R_dtNO3 = 0.8phiS_phi[z] * (R_pfoc_NO3 + R_psoc_NO3)# + RNHox
         end
         if pfoc.now[z] + interval*R_pfoc < 0.0  # too much fast-POC used
-            R_pfoc = -pfoc.now[z]/interval
-            R_dO2 = phiS_phi[z]*(R_pfoc + R_psoc)
+            # Fractions of fPOC degraded by...
+            frac_O2 = R_pfoc_O2 / R_pfoc
+            frac_NO3 = R_pfoc_NO3 / R_pfoc
+            R_pfoc = -pfoc.now[z] / interval
+            # Update others with new values
+            R_pfoc_O2 = R_pfoc * frac_O2
+            R_dO2 = phiS_phi[z] * (R_pfoc_O2 + R_psoc_O2)
+            R_pfoc_NO3 = R_pfoc * frac_NO3
+            R_dtNO3 = 0.8phiS_phi[z] * (R_pfoc_NO3 + R_psoc_NO3)# + RNHox
         end
         if psoc.now[z] + interval*R_psoc < 0.0  # too much slow-POC used
-            R_psoc = -psoc.now[z]/interval
-            R_dO2 = phiS_phi[z]*(R_pfoc + R_psoc)
+            # Fractions of sPOC degraded by...
+            frac_O2 = R_psoc_O2 / R_psoc
+            frac_NO3 = R_psoc_NO3 / R_psoc
+            R_psoc = -psoc.now[z] / interval
+            # Update others with new values
+            R_psoc_O2 = R_psoc * frac_O2
+            R_dO2 = phiS_phi[z] * (R_pfoc_O2 + R_psoc_O2)
+            R_psoc_NO3 = R_psoc * frac_NO3
+            R_dtNO3 = 0.8phiS_phi[z] * (R_pfoc_NO3 + R_psoc_NO3)# + RNHox
         end
-        R_dtCO2 = -phiS_phi[z]*(R_pfoc + R_psoc)
+        R_dtCO2 = -phiS_phi[z] * (R_pfoc_O2 + R_psoc_O2 + R_pfoc_NO3 + R_psoc_NO3)
         react!(dO2, z, R_dO2)
         react!(dtCO2, z, R_dtCO2)
+        react!(dtNO3, z, R_dtNO3)
+        # react!(dtSO4, z, R_dtSO4)
+        # react!(dtPO4, z, R_dtPO4)
+        # react!(dtNH4, z, R_dtNH4)
+        # react!(dtH2S, z, R_dtH2S)
+        # react!(dFeII, z, R_dFeII)
+        # react!(dMnII, z, R_dMnII)
         react!(pfoc, z, R_pfoc)
         react!(psoc, z, R_psoc)
         # react!(proc, z, 0.0)  # "refractory" means it doesn't react!
