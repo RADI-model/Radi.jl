@@ -81,7 +81,7 @@ function kslow(Fpoc::Float64, depths::Array{Float64,1}, lambda_s::Float64)
 end  # function kslow
 
 "Calculate bulk burial velocity at the sediment-water interface in m/a."
-x0(Fpom::Float64, rho_pom::Float64, phiS_2::Float64) = Fpom/(rho_pom*phiS_2)
+x0(Fp::Float64, rho_p::Float64, phiS_2::Float64) = Fp/(rho_p*phiS_2)
 
 "Calculate bulk burial velocity at infinite depth in the sediment in m/a."
 xinf(x0::Float64, phiS_2::Float64, phiS_e2::Float64) = x0*phiS_2/phiS_e2
@@ -106,10 +106,33 @@ end  # function sigma
 "Calculate T-dependent 'free solution' diffusion coeff. for O2 in m^2/a."
 D_dO2(T::Float64) = 0.034862 + 0.001409T
 
-"""Calculate T-dependent 'free solution' diffusion coeff. for tCO2 in m^2/a.
-approximted to bicarbonate diffusion coefficient from Hulse et al (2018).
+"""Calculate T-dependent 'free solution' diffusion coeff. for tCO2 in m^2/a, as
+approximated by the bicarbonate diffusion coefficient of Hulse et al (2018).
 """
 D_dtCO2(T::Float64) = 0.015169 + 0.000793T
+
+"Nitrate diffusion coefficient from Li and Gregory (1974) in m^2/a."
+D_dtNO3(T::Float64) = 0.030842 + 0.001226T
+
+"Sulfate diffusion coefficient from Li and Gregory (1974) in m^2/a."
+D_dtSO4(T::Float64) = 0.015768 + 0.000788T
+
+"Phosphate diffusion coefficient from Li and Gregory (1974) in m^2/a."
+D_dtPO4(T::Float64) = 0.011291 + 0.000559T
+
+"Ammonium diffusion coefficient from Li and Gregory (1974) in m^2/a."
+D_dtNH4(T::Float64) = 0.030905 + 0.001226T
+
+"""Hydrogen sulfide diffusion coefficient from the UNISENSE table by Ramsing and
+Gundersen in m^2/a.
+"""
+D_dtH2S(T::Float64) = 0.030748 + 0.000964T
+
+"Manganese diffusion coefficient from Li and Gregory (1974) in m^2/a."
+D_dMn(T::Float64) = 0.0086 + 0.001525T
+
+"Iron diffusion coefficient from Li and Gregory (1974) in m^2/a."
+D_dFe(T::Float64) = 0.0108 + 0.001478T
 
 "Calculate alpha_0 parameter for irrigation (Archer et al. 2002)."
 function alpha_0(Fpoc::Float64, dO2_w::Float64)
