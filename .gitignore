@@ -30,3 +30,4 @@ Manifest.toml
 *.dvi
 *.log
 *.out
+texdocs/Exported items.bib
