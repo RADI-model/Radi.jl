@@ -132,7 +132,7 @@ and the molar particulate organic carbon (POC) flux ($F_c$, $\code{Foc}$ in mol$
 
 In the current set-up of RADI.jl, the porosity parameters $\phi_\infty$ and $\phi_0$ are set to 0.74 and 0.85 respectively ($\code{phiInf}$ and $\code{phi0}$, both dimensionless), and $\beta = 33$ m$^{-1}$ ($\code{beta}$).  These values were obtained by fitting real data from station 7, mooring 3 of cruise NBP98-2 \citep{sayles_benthic_2001}.
 
-The porosity ($\phi_z$, $\code{phi}$, dimensionless) is parameterised following \citet{boudreau_method--lines_1996}:
+The porosity ($\phi_z$, $\code{phi}$, dimensionless) is parameterised following \citet{boudreau_method_1996}:
 \begin{equation}\label{phi}
 \code{phi} = \phi_z = \phi_\infty + (\phi_0 - \phi_\infty) \exp(-\beta z)
 \end{equation}
@@ -207,7 +207,7 @@ and the solid burial velocity ($w_z$, $\code{w}$ in m$\cdot$a$^{-1}$) is:
 \code{w} = w_z = x_\infty \phi_{s,Z} / \phi_{s,z}
 \end{equation}
 
-$P_{e_\mathrm{h}, z}$ ($\code{Peh}$) is one-half of the cell Peclet number, following \citet{boudreau_method--lines_1996}:
+$P_{e_\mathrm{h}, z}$ ($\code{Peh}$) is one-half of the cell Peclet number, following \citet{boudreau_method_1996}:
 \begin{equation}
 \code{Peh} = P_{e_\mathrm{h}, z} = w_z \D{z} / (2 b_z)
 \end{equation}
@@ -268,12 +268,12 @@ In general, only the subscript $z$s are explicitly written out in this document.
 
 Advection and diffusion processes require values for each model variable not only at the depth being modelled ($z$) but also in the layers above and below ($z - \D{z}$ and $z + \D{z}$).  These values exist within the sediment (i.e. $0 < z < Z$) but not at its extremes.  At the sediment-water interface ($z = 0$) we require a value for the variable at $z = -\D{z}$, effectively within the overlying water.  At the very bottom of the modelled sediment ($z = Z$) we require a value for the next layer down, at $z = Z + \D{z}$.
 
-Effective values of each variable in these ``next layers'' just beyond the modelled domain are calculated following \citet{boudreau_method--lines_1996}.  These effective values can then be used to calculate the effects of advection and diffusion in the top and bottom layers using exactly the same equations as within the sediment itself.
+Effective values of each variable in these ``next layers'' just beyond the modelled domain are calculated following \citet{boudreau_method_1996}.  These effective values can then be used to calculate the effects of advection and diffusion in the top and bottom layers using exactly the same equations as within the sediment itself.
 
 
 \subsubsection{Above the sediment-water interface}
 
-Following \citet{boudreau_method--lines_1996}, we calculate advection and diffusion at $z = 0$ using following substitutions for solutes:
+Following \citet{boudreau_method_1996}, we calculate advection and diffusion at $z = 0$ using following substitutions for solutes:
 % Equation used in model, following CANDI code but different from Boudreau:
 \begin{equation}\label{Dv0}
 v_{(-\D{z})} = v_{\D{z}} + \frac{2 \theta_z^2 \D{z}}{\delta} (v_\mathrm{w} - v_0)
@@ -312,17 +312,17 @@ Biogeochemical reactions operate on solutes and solids throughout the entire sed
 
 For convenience:
 \begin{equation}
-  \ce{POM} = \ce{(CH2O)$_c$(NH3)$_n$(H3PO4)$_p$}
+  \ce{POM} = \ce{(CH2O)$_c$(NH3)$_n$(H3PO4)$_p$(s)}
 \end{equation}
 \begin{equation}
-  \ce{dPOM} = \ce{$c$CO2 + $n$NH3 + $p$H3PO4}
+  \ce{dPOM} = \ce{$c$CO2(aq) + $n$NH3(aq) + $p$H3PO4(aq)}
 \end{equation}
 The pathways, simplified to include only the species tracked by the model:
 \begin{equation}
   \ce{POM + $c$O2 ->[$d_{\ce{O2}}$] dPOM}% + $c$H2O}
 \end{equation}
 \begin{equation}
-  \ce{POM + $\frac{4}{5}c\,$NO3 ->[$d_{\ce{NO3}}$] dPOM + $\frac{2}{5}c\,$N2 + $\frac{1}{5}c\,$O2}% + $c$H2O}
+  \ce{POM + $\frac{4}{5}c\,$NO3- ->[$d_{\ce{NO3-}}$] dPOM + $\frac{2}{5}c\,$N2 + $\frac{1}{5}c\,$O2}% + $c$H2O}
 \end{equation}
 \begin{equation}
   \ce{POM + $2c\,$MnO2 ->[$d_{\ce{MnO2}}$] dPOM + $2c\,$Mn^2+}% + $4c\,$OH- - H2O}
@@ -337,6 +337,38 @@ The pathways, simplified to include only the species tracked by the model:
   \ce{POM + $\frac{1}{2}c\,$CO2 ->[$d_{\ce{CO2}}$] dPOM + $\frac{1}{2}c\,$CH4}
 \end{equation}
 Each of the reactions above can be balanced by adding to the products the appropriate amounts of \ce{OH-} to balance the charges and then \ce{H2O} to balance the residual \ce{H} and \ce{O} budgets.
+
+These degradation reactions are all first-order with respect to all reactants.  The rate constants ($d$) follow a Monod scheme, as follows.  Each reactant $v$ has an \textit{inhibition factor}, denoted $f'$:
+\begin{equation}
+  f'(v) = \frac{k'(v)}{k'(v) + [v]}
+\end{equation}
+where the $k'$ are inhibition constants following \citet{soetaert_model_1996} and \citet{van_cappellen_cycling_1996}.  There are a corresponding set of $k$ reaction constants.
+
+The respiration pathway rate constants ($r$) for the reactions above are composed from the reaction constants and inhibition factors:
+\begin{equation}
+  d_{\ce{O2}} = \frac{[\ce{O2}]}{k(\ce{O2}) + [\ce{O2}]}
+\end{equation}
+\begin{equation}
+  d_{\ce{NO3-}} = \frac{[\ce{NO3-}]}{k(\ce{NO3-}) + [\ce{NO3-}]} \cdot f'_{\ce{O2}}
+\end{equation}
+\begin{equation}
+  d_{\ce{MnO2}} = \frac{[\ce{MnO2}]}{k(\ce{MnO2}) + [\ce{MnO2}]} \cdot f'_{\ce{O2}} f'_{\ce{NO3}}
+\end{equation}
+\begin{equation}
+  d_{\ce{Fe(OH)3}} = \frac{[\ce{Fe(OH)3}]}{k(\ce{Fe(OH)3}) + [\ce{Fe(OH)3}]} \cdot f'_{\ce{O2}} f'_{\ce{NO3}} f'_{\ce{MnO2}}
+\end{equation}
+\begin{equation}
+  d_{\ce{SO4^2-}} = \frac{[\ce{SO4^2-}]}{k(\ce{SO4^2-}) + [\ce{SO4^2-}]} \cdot f'_{\ce{O2}} f'_{\ce{NO3}} f'_{\ce{MnO2}} f'_{\ce{Fe(OH)3}}
+\end{equation}
+\begin{equation}
+  d_{\ce{CH4}} = f'_{\ce{O2}} f'_{\ce{NO3}} f'_{\ce{MnO2}} f'_{\ce{Fe(OH)3}} f'_{\ce{SO4}}
+\end{equation}
+
+The overall reaction rate of each reaction is then given by:
+\begin{equation}
+  R = k d \cdot [\ce{POC}]
+\end{equation}
+with separate $k$ and $[\ce{POC}]$ for the slow- and fast-reacting fractions.
 
 \subsubsection{Redox reactions}
 
@@ -353,6 +385,7 @@ These reactions have been simplified to include only the species tracked by the 
 \begin{equation}
   \ce{NH3 + 2O2 ->[$r_{\ce{NH3}}$] NO3-}% + H2O + H+}
 \end{equation}
+These redox reactions are all first-order with respect to all reactants.  The rate constants have constant values following \citet{boudreau_method_1996}.
 
 \subsubsection{Previous version}
 
@@ -438,7 +471,7 @@ Each solute has a ``free-solution'' molecular/ionic diffusion coefficient $d^\ci
 d^\circ(\ce{O2}) = 0.034862 + 0.001409 T_\mathrm{w}
 \end{equation}
 
-The $d^\circ(v)$ can be converted into the $d_z(v)$ required by RADI following \citet{boudreau_method--lines_1996}:
+The $d^\circ(v)$ can be converted into the $d_z(v)$ required by RADI following \citet{boudreau_method_1996}:
 \begin{equation}
 d_z(v) = \frac{d^\circ(v)}{(\theta_z)^2}
 \end{equation}
