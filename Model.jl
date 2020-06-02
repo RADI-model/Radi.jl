@@ -404,7 +404,7 @@ end  # for t, main RADI model loop
 # ===== End of main model loop =================================================
 println("RADI done!")
 return depths[2:end-1], dO2.save, dtCO2.save, pfoc.save, psoc.save, proc.save
-end  # function model
+end  # function timeloop
 
 "Calculate how far from equilibrium the sediment column is."
 function disequilibrium(dO2, pfoc)
