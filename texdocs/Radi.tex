@@ -308,6 +308,38 @@ Biogeochemical reactions operate on solutes and solids throughout the entire sed
 
 \subsection{Organic matter degradation}
 
+\subsubsection{Pathways}
+
+For convenience:
+\begin{equation}
+  \ce{POM} = \ce{(CH2O)$_c$(NH3)$_n$(H3PO4)$_p$}
+\end{equation}
+\begin{equation}
+  \ce{dPOM} = \ce{$c$CO2 + $n$NH3 + $p$H3PO4}
+\end{equation}
+The pathways, simplified to include only the species tracked by the model:
+\begin{equation}
+  \ce{POM + $c$O2 ->[$d_{\ce{O2}}$] dPOM}% + $c$H2O}
+\end{equation}
+\begin{equation}
+  \ce{POM + $\frac{4}{5}c\,$NO3 ->[$d_{\ce{NO3}}$] dPOM + $\frac{2}{5}c\,$N2 + $\frac{1}{5}c\,$O2}% + $c$H2O}
+\end{equation}
+\begin{equation}
+  \ce{POM + $2c\,$MnO2 ->[$d_{\ce{MnO2}}$] dPOM + $2c\,$Mn^2+}% + $4c\,$OH- - H2O}
+\end{equation}
+\begin{equation}
+  \ce{POM + $4c\,$Fe(OH)3 ->[$d_{\ce{Fe(OH)3}}$] dPOM + $4c\,$Fe^2+}% + $8c\,$OH- + $3c\,$H2O}
+\end{equation}
+\begin{equation}
+  \ce{POM + $\frac{1}{2}c\,$SO4^2- ->[$d_{\ce{SO4^2-}}$] dPOM + $\frac{1}{2}c\,$H2S}% + $c$OH-}
+\end{equation}
+\begin{equation}
+  \ce{POM + $\frac{1}{2}c\,$CO2 ->[$d_{\ce{CO2}}$] dPOM + $\frac{1}{2}c\,$CH4}
+\end{equation}
+Each of the reactions above can be balanced by adding to the products the appropriate amounts of \ce{OH-} to balance the charges and then \ce{H2O} to balance the residual \ce{H} and \ce{O} budgets.
+
+\subsubsection{Previous version}
+
 Organic matter degradation affects dissolved oxygen and particulate organic carbon:
 \begin{equation}
 \code{R\_poc} = R_z(\mathrm{POC}) = -k_z [\mathrm{POC}]_z
