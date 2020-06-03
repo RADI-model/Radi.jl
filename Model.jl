@@ -42,8 +42,8 @@ FloatOrArray = ArrayOrFloat = Union{Float64,Array{Float64,1}}
 function preptime(stoptime::Float64, interval::Float64, saveperXsteps::Int)
     timesteps::Array{Float64,1} = collect(0.0:interval:stoptime)
     ntps::Int = length(timesteps)
-    savepoints::Array{Int64,1} = collect(1:saveperXsteps:ntps)
-    # Save final timepoint if it's not already in the list
+    savepoints::Array{Int64,1} = collect((1+saveperXsteps):saveperXsteps:ntps)
+    # Save final timepoint too if it's not already in the list
     if !(ntps in savepoints)
         append!(savepoints, ntps)
     end
@@ -527,9 +527,13 @@ for t in 1:ntps
 end  # for t, main Radi model loop
 # ===== End of main model loop =================================================
 println("Radi done!")
+# Reformat times and depths for plotting output
+savetimes = [0.0 timesteps[savepoints]...]
+depths_out = depths[2:end-1]
+depths_out = reshape(depths_out, (length(depths_out), 1))
 return (
-    timesteps[savepoints],
-    depths[2:end-1],
+    savetimes,
+    depths_out,
     dO2.save,
     dtCO2.save,
     dtNO3.save,
