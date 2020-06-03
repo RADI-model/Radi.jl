@@ -297,7 +297,13 @@ end  # function substitute!
 
 "React a Solute or Solid."
 function react!(var::SolidOrSolute, z::Int, rate::Float64)
-    var.now[z] += interval*rate
+    change = interval * rate
+    if change > var.now[z]
+        var.now[z] = 0.0
+        println("Warning: overriding negative concentration with zero.")
+    else
+        var.now[z] += change
+    end  # if else
 end  # function react!
 
 "Calculate advection rate for a solute."
