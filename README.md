@@ -31,4 +31,4 @@ Radi.save(results, "_more")  # ... append "_more" to the file name
 
 ### Plot the results in Octave/MATLAB
 
-Use [`plot/everything.m`](plot/everything.m) to import and plot the results saved by Julia.
+Julia no longer generates a plot of the results, but instead saves the results to a .mat file in the [`results/`](results) directory.  Use [`plot/everything.m`](plot/everything.m) to import and plot the results saved by Julia in Octave or MATLAB.

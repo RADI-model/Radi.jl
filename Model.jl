@@ -300,7 +300,7 @@ function react!(var::SolidOrSolute, z::Int, rate::Float64)
     change = interval * rate
     if change > var.now[z]
         var.now[z] = 0.0
-        println("Warning: overriding negative concentration with zero.")
+        # println("Warning: overriding negative concentration with zero.")
     else
         var.now[z] += change
     end  # if else
