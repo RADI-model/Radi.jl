@@ -298,7 +298,7 @@ end  # function substitute!
 "React a Solute or Solid."
 function react!(var::SolidOrSolute, z::Int, rate::Float64)
     change = interval * rate
-    if change > var.now[z]
+    if var.now[z] + change < 0.0
         var.now[z] = 0.0
         # println("Warning: overriding negative concentration with zero.")
     else
