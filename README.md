@@ -12,10 +12,16 @@ Still a work in progress, but getting there.
 # This sets things up and runs the model from initial constant conditions:
 include("Radi.jl")
 
-# Now save the results in the main scope:
+# Now save the results dictionary in the main scope, for convenience:
 results = Radi.results;
 
-# Do a new run starting at the previous endpoint (overwrites previous results):
+# Access the different variables:
+results[:savetimes]  # time of savepoints in years
+results[:depths]  # model depths in m
+results[:dO2]  # dissolved oxygen (rows = depths, columns = savetimes)
+# and so on.
+
+# Do a new run starting at the previous endpoint (overwrites previous dictionary):
 results = Radi.again(results)
 
 # Save the new set of results as a .mat file in /results/:
