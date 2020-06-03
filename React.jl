@@ -152,79 +152,175 @@ function getreactions(
     ) = degrade(dO2, dtNO3, pMnO2, pFeOH3, dtSO4, pfoc_kfast, psoc_kslow)
     # Redox reactions
     R_dMnII, R_dFeII, R_dNH3, R_dH2S = redox(dO2, dtNH4, dtH2S, dFeII, dMnII)
-    return Dict(
-        :fast_dO2 => Rfast_dO2,
-        :slow_dO2 => Rslow_dO2,
-        :fast_dtNO3 => Rfast_dtNO3,
-        :slow_dtNO3 => Rslow_dtNO3,
-        :fast_pMnO2 => Rfast_pMnO2,
-        :slow_pMnO2 => Rslow_pMnO2,
-        :fast_pFeOH3 => Rfast_pFeOH3,
-        :slow_pFeOH3 => Rslow_pFeOH3,
-        :fast_dtSO4 => Rfast_dtSO4,
-        :slow_dtSO4 => Rslow_dtSO4,
-        :fast_dCH4 => Rfast_dCH4,
-        :slow_dCH4 => Rslow_dCH4,
-        :fast_total => Rfast_total,
-        :slow_total => Rslow_total,
-        :redox_dMnII => R_dMnII,
-        :redox_dFeII => R_dFeII,
-        :redox_dNH3 => R_dNH3,
-        :redox_dH2S => R_dH2S,
+    return (
+        Rfast_dO2,
+        Rslow_dO2,
+        Rfast_dtNO3,
+        Rslow_dtNO3,
+        Rfast_pMnO2,
+        Rslow_pMnO2,
+        Rfast_pFeOH3,
+        Rslow_pFeOH3,
+        Rfast_dtSO4,
+        Rslow_dtSO4,
+        Rfast_dCH4,
+        Rslow_dCH4,
+        Rfast_total,
+        Rslow_total,
+        R_dMnII,
+        R_dFeII,
+        R_dNH3,
+        R_dH2S,
     )
 end # function getreactions
 
 
 "Convert reactions to individual component rates."
 function reactions2rates(
-    reactions::Dict{Symbol,Float64},
+    Rfast_dO2::Float64,
+    Rslow_dO2::Float64,
+    Rfast_dtNO3::Float64,
+    Rslow_dtNO3::Float64,
+    Rfast_pMnO2::Float64,
+    Rslow_pMnO2::Float64,
+    Rfast_pFeOH3::Float64,
+    Rslow_pFeOH3::Float64,
+    Rfast_dtSO4::Float64,
+    Rslow_dtSO4::Float64,
+    Rfast_dCH4::Float64,
+    Rslow_dCH4::Float64,
+    Rfast_total::Float64,
+    Rslow_total::Float64,
+    R_dMnII::Float64,
+    R_dFeII::Float64,
+    R_dNH3::Float64,
+    R_dH2S::Float64,
     phiS_phi_z::Float64,
     RC::Float64,
     RN::Float64,
     RP::Float64,
 )
     # Add things up for convenience
-    Rdeg_dO2 = reactions[:fast_dO2] + reactions[:slow_dO2]
-    Rdeg_dtNO3 = reactions[:fast_dtNO3] + reactions[:slow_dtNO3]
-    Rdeg_dtSO4 = reactions[:fast_dtSO4] + reactions[:slow_dtSO4]
-    Rdeg_pFeOH3 = reactions[:fast_pFeOH3] + reactions[:slow_pFeOH3]
-    Rdeg_pMnO2 = reactions[:fast_pMnO2] + reactions[:slow_pMnO2]
-    Rdeg_dCH4 = reactions[:fast_dCH4] + reactions[:slow_dCH4]
-    Rdeg_total = reactions[:fast_total] + reactions[:slow_total]
+    Rdeg_dO2 = Rfast_dO2 + Rslow_dO2
+    Rdeg_dtNO3 = Rfast_dtNO3 + Rslow_dtNO3
+    Rdeg_dtSO4 = Rfast_dtSO4 + Rslow_dtSO4
+    Rdeg_pFeOH3 = Rfast_pFeOH3 + Rslow_pFeOH3
+    Rdeg_pMnO2 = Rfast_pMnO2 + Rslow_pMnO2
+    Rdeg_dCH4 = Rfast_dCH4 + Rslow_dCH4
+    Rdeg_total = Rfast_total + Rslow_total
     # Total changes in porewater/sediment components from reaction rates
     p2d = phiS_phi_z  # convert particulate to dissolved
     d2p = 1.0 / phiS_phi_z  # convert dissolved to particulate
     rate_dO2 = p2d * RC * (Rdeg_dtNO3/5.0 - Rdeg_dO2) -
-        (reactions[:redox_dFeII]/4.0 + reactions[:redox_dMnII]/2.0 +
-        reactions[:redox_dH2S]*2.0 + reactions[:redox_dNH3]*2.0)
+        (R_dFeII/4.0 + R_dMnII/2.0 +
+        R_dH2S*2.0 + R_dNH3*2.0)
     rate_dtCO2 = p2d * RC * (Rdeg_total - Rdeg_dCH4/2.0)
-    rate_dtNO3 = p2d * RC * -Rdeg_dtNO3*4.0/5.0 + reactions[:redox_dNH3]
-    rate_dtSO4 = p2d * RC * -Rdeg_dtSO4/2.0 + reactions[:redox_dH2S]
+    rate_dtNO3 = p2d * RC * -Rdeg_dtNO3*4.0/5.0 + R_dNH3
+    rate_dtSO4 = p2d * RC * -Rdeg_dtSO4/2.0 + R_dH2S
     rate_dtPO4 = p2d * RP * Rdeg_total
-    rate_dtNH4 = p2d * RN * Rdeg_total - reactions[:redox_dNH3]
-    rate_dtH2S = p2d * RC * Rdeg_dtSO4/2.0 - reactions[:redox_dH2S]
-    rate_dFeII = p2d * RC * Rdeg_pFeOH3*4.0 - reactions[:redox_dFeII]
-    rate_dMnII = p2d * RC * Rdeg_pMnO2*2.0 - reactions[:redox_dMnII]
-    rate_pfoc = -reactions[:fast_total]
-    rate_psoc = -reactions[:slow_total]
-    rate_pFeOH3 = RC * -Rdeg_pFeOH3*4.0 + d2p * reactions[:redox_dFeII]
-    rate_pMnO2 = RC * -Rdeg_pMnO2*2.0 + d2p * reactions[:redox_dMnII]
-    return Dict(
-        :dO2 => rate_dO2,
-        :dtCO2 => rate_dtCO2,
-        :dtNO3 => rate_dtNO3,
-        :dtSO4 => rate_dtSO4,
-        :dtPO4 => rate_dtPO4,
-        :dtNH4 => rate_dtNH4,
-        :dtH2S => rate_dtH2S,
-        :dFeII => rate_dFeII,
-        :dMnII => rate_dMnII,
-        :pfoc => rate_pfoc,
-        :psoc => rate_psoc,
-        :pFeOH3 => rate_pFeOH3,
-        :pMnO2 => rate_pMnO2,
+    rate_dtNH4 = p2d * RN * Rdeg_total - R_dNH3
+    rate_dtH2S = p2d * RC * Rdeg_dtSO4/2.0 - R_dH2S
+    rate_dFeII = p2d * RC * Rdeg_pFeOH3*4.0 - R_dFeII
+    rate_dMnII = p2d * RC * Rdeg_pMnO2*2.0 - R_dMnII
+    rate_pfoc = -Rfast_total
+    rate_psoc = -Rslow_total
+    rate_pFeOH3 = RC * -Rdeg_pFeOH3*4.0 + d2p * R_dFeII
+    rate_pMnO2 = RC * -Rdeg_pMnO2*2.0 + d2p * R_dMnII
+    return (
+        rate_dO2,
+        rate_dtCO2,
+        rate_dtNO3,
+        rate_dtSO4,
+        rate_dtPO4,
+        rate_dtNH4,
+        rate_dtH2S,
+        rate_dFeII,
+        rate_dMnII,
+        rate_pfoc,
+        rate_psoc,
+        rate_pFeOH3,
+        rate_pMnO2,
     )
 end # function reactions2rates
+
+
+"Rates of change of each component."
+function rates(
+    dO2::Float64,
+    dtNO3::Float64,
+    pMnO2::Float64,
+    pFeOH3::Float64,
+    dtSO4::Float64,
+    dtNH4::Float64,
+    dtH2S::Float64,
+    dFeII::Float64,
+    dMnII::Float64,
+    pfoc_kfast::Float64,
+    psoc_kslow::Float64,
+    phiS_phi_z::Float64,
+    RC::Float64,
+    RN::Float64,
+    RP::Float64,
+)
+    # Get total reaction rates from concentrations
+    (
+        Rfast_dO2,
+        Rslow_dO2,
+        Rfast_dtNO3,
+        Rslow_dtNO3,
+        Rfast_pMnO2,
+        Rslow_pMnO2,
+        Rfast_pFeOH3,
+        Rslow_pFeOH3,
+        Rfast_dtSO4,
+        Rslow_dtSO4,
+        Rfast_dCH4,
+        Rslow_dCH4,
+        Rfast_total,
+        Rslow_total,
+        R_dMnII,
+        R_dFeII,
+        R_dNH3,
+        R_dH2S,
+    ) = getreactions(
+        dO2,
+        dtNO3,
+        pMnO2,
+        pFeOH3,
+        dtSO4,
+        dtNH4,
+        dtH2S,
+        dFeII,
+        dMnII,
+        pfoc_kfast,
+        psoc_kslow,
+    )
+    # Convert total reaction rates to individual component rates
+    return reactions2rates(
+        Rfast_dO2,
+        Rslow_dO2,
+        Rfast_dtNO3,
+        Rslow_dtNO3,
+        Rfast_pMnO2,
+        Rslow_pMnO2,
+        Rfast_pFeOH3,
+        Rslow_pFeOH3,
+        Rfast_dtSO4,
+        Rslow_dtSO4,
+        Rfast_dCH4,
+        Rslow_dCH4,
+        Rfast_total,
+        Rslow_total,
+        R_dMnII,
+        R_dFeII,
+        R_dNH3,
+        R_dH2S,
+        phiS_phi_z,
+        RC,
+        RN,
+        RP,
+    )
+end # function rates
 
 
 end # module React

@@ -439,8 +439,21 @@ for t in 1:ntps
         advect!(pMnO2, z)
         diffuse!(pMnO2, z)
         # --- Then do the reactions! -------------------------------------------
-        # Calculate maximum reaction rates
-        reactions = React.getreactions(
+        (
+            rate_dO2,
+            rate_dtCO2,
+            rate_dtNO3,
+            rate_dtSO4,
+            rate_dtPO4,
+            rate_dtNH4,
+            rate_dtH2S,
+            rate_dFeII,
+            rate_dMnII,
+            rate_pfoc,
+            rate_psoc,
+            rate_pFeOH3,
+            rate_pMnO2,
+        ) = React.rates(
             dO2.then[z],
             dtNO3.then[z],
             pMnO2.then[z],
@@ -452,30 +465,25 @@ for t in 1:ntps
             dMnII.then[z],
             pfoc.then[z] * kfast[z],
             psoc.then[z] * kslow[z],
+            phiS_phi[z],
+            RC,
+            RN,
+            RP,
         )
-        rates = React.reactions2rates(reactions, phiS_phi[z], RC, RN, RP)
-        # Check maximum reaction rates are possible after other processes have
-        # acted in this timestep, and correct them if not
-        # DISSOLVED OXYGEN
-        if dO2.now[z] < -interval*rates[:dO2]  # too much dO2 used
-            pfx_dO2 = -dO2.now[z] / (interval*rates[:dO2])
-            reactions[:fast_dtNO3] *= pfx_dO2
-            reactions[:slow_dtNO3] *= pfx_dO2
-        end # if
-        react!(dO2, z, rates[:dO2])
-        react!(dtCO2, z, rates[:dtCO2])
-        react!(dtNO3, z, rates[:dtNO3])
-        react!(dtSO4, z, rates[:dtSO4])
-        react!(dtPO4, z, rates[:dtPO4])
-        react!(dtNH4, z, rates[:dtNH4])
-        react!(dtH2S, z, rates[:dtH2S])
-        react!(dFeII, z, rates[:dFeII])
-        react!(dMnII, z, rates[:dMnII])
-        react!(pfoc, z, rates[:pfoc])
-        react!(psoc, z, rates[:psoc])
+        react!(dO2, z, rate_dO2)
+        react!(dtCO2, z, rate_dtCO2)
+        react!(dtNO3, z, rate_dtNO3)
+        react!(dtSO4, z, rate_dtSO4)
+        react!(dtPO4, z, rate_dtPO4)
+        react!(dtNH4, z, rate_dtNH4)
+        react!(dtH2S, z, rate_dtH2S)
+        react!(dFeII, z, rate_dFeII)
+        react!(dMnII, z, rate_dMnII)
+        react!(pfoc, z, rate_pfoc)
+        react!(psoc, z, rate_psoc)
         # react!(proc, z, 0.0)  # "refractory" means it doesn't react!
-        react!(pFeOH3, z, rates[:pFeOH3])
-        react!(pMnO2, z, rates[:pMnO2])
+        react!(pFeOH3, z, rate_pFeOH3)
+        react!(pMnO2, z, rate_pMnO2)
     
         # if dO2.now[z] + interval*R_dO2 < 0.0  # too much O2 used
         #     R_dO2 = -dO2.now[z] / interval
