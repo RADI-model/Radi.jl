@@ -1,27 +1,28 @@
 # Radi.jl
 
-1D Reaction-Advection-Diffusion-Irrigation (RADI) diagenetic sediment module in Julia.
+The one-dimensional reactive-advective-diffusive-irrigative diagenetic sediment module in Julia.
 
 ## Instructions
 
-Note that the current running instructions are still very much a temporary bodge job!
+Still a work in progress, but getting there.
+
+### Run the model in Julia
 
 ```julia
 # This sets things up and runs the model from initial constant conditions:
 include("Radi.jl")
 
-# Now save the output variables in the main scope:
-dO2 = Radi.dO2;  # dissolved oxygen
-dtCO2 = Radi.dtCO2;  # dissolved inorganic carbon
-pfoc = Radi.pfoc;  # fast-degrading POC
-psoc = Radi.psoc;  # slow-degrading POC
-proc = Radi.proc;  # refractory POC
+# Now save the results in the main scope:
+results = Radi.results;
 
-# With the command below you can do a new run starting at the previous endpoint:
-depths, dO2, dtCO2, pfoc, psoc, proc = Radi.profiles(
-  dO2[:, end], dtCO2[:, end], pfoc[:, end], psoc[:, end], proc[:, end])
+# Do a new run starting at the previous endpoint (overwrites previous results):
+results = Radi.again(results)
 
-# Just repeat the exact same command again as many times as you like:
-depths, dO2, dtCO2, pfoc, psoc, proc = Radi.profiles(
-  dO2[:, end], dtCO2[:, end], pfoc[:, end], psoc[:, end], proc[:, end])
+# Save the new set of results as a .mat file in /results/:
+Radi.save(results)  # overwrite original file, or...
+Radi.save(results, "_more")  # ... append "_more" to the file name
 ```
+
+### Plot the results in Octave/MATLAB
+
+Use [`plot/everything.m`](plot/everything.m) to import and plot the results saved by Julia.

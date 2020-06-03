@@ -484,66 +484,6 @@ for t in 1:ntps
         # react!(proc, z, 0.0)  # "refractory" means it doesn't react!
         react!(pFeOH3, z, rate_pFeOH3)
         react!(pMnO2, z, rate_pMnO2)
-    
-        # if dO2.now[z] + interval*R_dO2 < 0.0  # too much O2 used
-        #     R_dO2 = -dO2.now[z] / interval
-        #     # Determine fPOC/sPOC on the basis of their original rate ratio
-        #     _Rf = R_pfoc_O2 / (R_pfoc_O2 + R_psoc_O2)
-        #     R_pfoc_O2 = _Rf * R_dO2 / phiS_phi_z
-        #     R_psoc_O2 = (1.0 - _Rf) * R_dO2 / phiS_phi_z
-        #     # Update others with new values
-        #     R_pfoc = R_pfoc_O2 + R_pfoc_NO3 + R_pfoc_MnO2
-        #     R_psoc = R_psoc_O2 + R_psoc_NO3 + R_psoc_MnO2
-        # end
-        # if dtNO3.now[z] + interval*R_dtNO3 < 0.0  # too much NO3 used
-        #     R_dtNO3 = -dtNO3.now[z] / interval
-        #     # Determine fPOC/sPOC on the basis of their original rate ratio
-        #     _Rf = R_pfoc_NO3 / (R_pfoc_NO3 + R_psoc_NO3)
-        #     R_pfoc_NO3 = _Rf * R_dtNO3 / 0.8phiS_phi_z
-        #     R_psoc_NO3 = (1.0 - _Rf) * R_dtNO3 / 0.8phiS_phi_z
-        #     # Update others with new values
-        #     R_pfoc = R_pfoc_O2 + R_pfoc_NO3 + R_pfoc_MnO2
-        #     R_psoc = R_psoc_O2 + R_psoc_NO3 + R_psoc_MnO2
-        # end
-        # if pMnO2.now[z] + interval*R_pMnO2 < 0.0  # too much pMnO2 used
-        #     R_pMnO2 = -pMnO2.now[z] / interval
-        #     # Determine fPOC/sPOC on the basis of their original rate ratio
-        #     _Rf = R_pfoc_MnO2 / (R_pfoc_MnO2 + R_psoc_MnO2)
-        #     R_pfoc_MnO2 = _Rf * R_pMnO2 / 2.0
-        #     R_psoc_MnO2 = (1.0 - _Rf) * R_pMnO2 / 2.0
-        #     # Update others with new values
-        #     R_pfoc = R_pfoc_O2 + R_pfoc_NO3 + R_pfoc_MnO2
-        #     R_psoc = R_psoc_O2 + R_psoc_NO3 + R_psoc_MnO2
-        # end
-        # if pfoc.now[z] + interval*R_pfoc < 0.0  # too much fast-POC used
-        #     # Fractions of fPOC degraded by...
-        #     frac_O2 = R_pfoc_O2 / R_pfoc
-        #     frac_NO3 = R_pfoc_NO3 / R_pfoc
-        #     frac_MnO2 = R_pfoc_MnO2 / R_pfoc
-        #     R_pfoc = -pfoc.now[z] / interval
-        #     # Update others with new values
-        #     R_pfoc_O2 = R_pfoc * frac_O2
-        #     R_pfoc_NO3 = R_pfoc * frac_NO3
-        #     R_pfoc_MnO2 = R_pfoc * frac_MnO2
-        #     R_dO2 = phiS_phi_z * (R_pfoc_O2 + R_psoc_O2)
-        #     R_dtNO3 = 0.8phiS_phi_z * (R_pfoc_NO3 + R_psoc_NO3)# + RNHox
-        #     R_pMnO2 = 2.0(R_psoc_MnO2 + R_pfoc_MnO2) + R_dMnII / phiS_phi_z
-        # end
-        # if psoc.now[z] + interval*R_psoc < 0.0  # too much slow-POC used
-        #     # Fractions of sPOC degraded by...
-        #     frac_O2 = R_psoc_O2 / R_psoc
-        #     frac_NO3 = R_psoc_NO3 / R_psoc
-        #     R_psoc = -psoc.now[z] / interval
-        #     # Update others with new values
-        #     R_psoc_O2 = R_psoc * frac_O2
-        #     R_psoc_NO3 = R_psoc * frac_NO3
-        #     R_pfoc_MnO2 = R_pfoc * frac_MnO2
-        #     R_dO2 = phiS_phi_z * (R_pfoc_O2 + R_psoc_O2)
-        #     R_dtNO3 = 0.8phiS_phi_z * (R_pfoc_NO3 + R_psoc_NO3)# + RNHox
-        #     R_pMnO2 = 2.0(R_psoc_MnO2 + R_pfoc_MnO2) + R_dMnII / phiS_phi_z
-        # end
-        # R_dtCO2 = -phiS_phi_z * (R_pfoc_O2 + R_psoc_O2 + R_pfoc_NO3 + R_psoc_NO3 +
-        #     R_pfoc_MnO2 + R_psoc_MnO2)
     # ~~~ END SEDIMENT PROCESSING ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         # Save output if we are at a savepoint
         if tsave
@@ -588,6 +528,7 @@ end  # for t, main Radi model loop
 # ===== End of main model loop =================================================
 println("Radi done!")
 return (
+    timesteps[savepoints],
     depths[2:end-1],
     dO2.save,
     dtCO2.save,
@@ -606,10 +547,12 @@ return (
 )
 end  # function model
 
-"Calculate how far from equilibrium the sediment column is."
-function disequilibrium(dO2, pfoc)
-    return dO2, pfoc
-end  # function disequilibrium
+
+# "Calculate how far from equilibrium the sediment column is."
+# function disequilibrium(dO2, pfoc)
+#     return dO2, pfoc
+# end  # function disequilibrium
+
 
 sayhello() = print(raw"""
 
