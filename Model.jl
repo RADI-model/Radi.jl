@@ -38,7 +38,7 @@ end  # function Solid
 SoluteOrSolid = SolidOrSolute = Union{Solid,Solute}
 FloatOrArray = ArrayOrFloat = Union{Float64,Array{Float64,1}}
 
-"Prepare vectors of model timesteps and savepoints. All time units are in days."
+"Prepare vectors of model timesteps and savepoints. All time units are in years."
 function preptime(stoptime::Float64, interval::Float64, saveperXsteps::Int)
     timesteps::Array{Float64,1} = collect(0.0:interval:stoptime)
     ntps::Int = length(timesteps)
