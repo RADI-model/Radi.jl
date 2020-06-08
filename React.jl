@@ -211,21 +211,19 @@ function reactions2rates(
     # Total changes in porewater/sediment components from reaction rates
     p2d = phiS_phi_z  # convert particulate to dissolved
     d2p = 1.0 / phiS_phi_z  # convert dissolved to particulate
-    rate_dO2 = p2d * RC/RC * (- Rdeg_dO2) -
-        (R_dFeII/4.0 + R_dMnII/2.0 +
-        R_dH2S*2.0 + R_dNH3*2.0)
-    rate_dtCO2 = p2d * RC/RC * (Rdeg_total - Rdeg_dCH4/2.0)
-    rate_dtNO3 = p2d * RC/RC * -Rdeg_dtNO3*4.0/5.0 + R_dNH3
-    rate_dtSO4 = p2d * RC/RC * -Rdeg_dtSO4/2.0 + R_dH2S
-    rate_dtPO4 = p2d * RP/RC * Rdeg_total
-    rate_dtNH4 = p2d * RN/RC * Rdeg_total - R_dNH3
-    rate_dtH2S = p2d * RC/RC * Rdeg_dtSO4/2.0 - R_dH2S
-    rate_dFeII = p2d * RC/RC * Rdeg_pFeOH3*4.0 - R_dFeII
-    rate_dMnII = p2d * RC/RC * Rdeg_pMnO2*2.0 - R_dMnII
+    rate_dO2 = p2d * -Rdeg_dO2 - (R_dFeII/4.0 + R_dMnII/2.0 + R_dH2S*2.0 + R_dNH3*2.0)
+    rate_dtCO2 = p2d * RC * (Rdeg_total - Rdeg_dCH4/2.0)
+    rate_dtNO3 = p2d * RC * -Rdeg_dtNO3*4.0/5.0 + R_dNH3
+    rate_dtSO4 = p2d * RC * -Rdeg_dtSO4/2.0 + R_dH2S
+    rate_dtPO4 = p2d * RP * Rdeg_total
+    rate_dtNH4 = p2d * RN * Rdeg_total - R_dNH3
+    rate_dtH2S = p2d * RC * Rdeg_dtSO4/2.0 - R_dH2S
+    rate_dFeII = p2d * RC * Rdeg_pFeOH3*4.0 - R_dFeII
+    rate_dMnII = p2d * RC * Rdeg_pMnO2*2.0 - R_dMnII
     rate_pfoc = -Rfast_total
     rate_psoc = -Rslow_total
-    rate_pFeOH3 = RC/RC * -Rdeg_pFeOH3*4.0 + d2p * R_dFeII
-    rate_pMnO2 = RC/RC * -Rdeg_pMnO2*2.0 + d2p * R_dMnII
+    rate_pFeOH3 = RC * -Rdeg_pFeOH3*4.0 + d2p * R_dFeII
+    rate_pMnO2 = RC * -Rdeg_pMnO2*2.0 + d2p * R_dMnII
     return (
         rate_dO2,
         rate_dtCO2,

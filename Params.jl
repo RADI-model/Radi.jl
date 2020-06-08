@@ -1,12 +1,12 @@
 module Params
 
-"Evaluate the 'Redfield' ratios for particulate organic matter."
+"Evaluate the 'Redfield' ratios for particulate organic matter, normalised to C."
 function redfield(dtPO4_w::Float64, rho_sw::Float64)
-    RC = @. 1.0/(6.9e-3dtPO4_w/(1e-6rho_sw) + 6e-3)
+    RC = @. 1.0 / (6.9e-3dtPO4_w / 1e-6rho_sw + 6e-3)
     # ^P:C computed as a function of SRP from Galbraith and Martiny PNAS 2015
     RN = 11.0 # value at 60 degS from Martiny et al. Nat G 2013
     RP = 1.0 # Redfield ratio for P in the deep sea
-    return RC, RN, RP
+    return 1.0, RN / RC, RP / RC
 end  # function redfield
 
 "Calculate the relative molar mass of POM in g/mol."

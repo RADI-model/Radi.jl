@@ -150,8 +150,8 @@ phi, phiS, phiS_phi, tort2, delta_phi, delta_phiS, delta_tort2i_tort2 =
 rho_sw = gsw_rho(S, T, P)  # seawater density [kg/m^3]
 RC, RN, RP = Params.redfield(dtPO4_w, rho_sw)
 Mpom = Params.rmm_pom(RC, RN, RP)  # g/mol
-Fpom_mol = Fpom/Mpom  # mol/m^2/a
-Fpoc = Fpom_mol*RC  # mol/m^2/a
+Fpom_mol = Fpom / Mpom  # mol/m^2/a
+Fpoc = Fpom_mol * RC  # mol/m^2/a
 # Split total flux into fast-slow-refractory portions
 Ffoc = Fpoc*Fpom_f
 Fsoc = Fpoc*Fpom_s
