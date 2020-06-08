@@ -14,12 +14,14 @@ const KMi_pFeOH3 = 265.0
 const KM_dtSO4 = 1.6
 const KMi_dtSO4 = 1.6
 
+
 # Monod scheme inhibition factors
 inhibition_dO2(dO2::Float64) = KMi_dO2 / (KMi_dO2 + dO2)
 inhibition_dtNO3(dtNO3::Float64) = KMi_dtNO3 / (KMi_dtNO3 + dtNO3)
 inhibition_pMnO2(pMnO2::Float64) = KMi_pMnO2 / (KMi_pMnO2 + pMnO2)
 inhibition_pFeOH3(pFeOH3::Float64) = KMi_pFeOH3 / (KMi_pFeOH3 + pFeOH3)
 inhibition_dtSO4(dtSO4::Float64) = KMi_dtSO4 / (KMi_dtSO4 + dtSO4)
+
 
 """Organic matter degradation pathway factors.
 From the code of Couture et al. (EST 2010), following Boudreau (1996).
@@ -51,6 +53,7 @@ function degradationfactors(
     fox = fdO2 + fdtNO3 + fpMnO2 + fpFeOH3 + fdtSO4 + fdCH4
     return fdO2, fdtNO3, fpMnO2, fpFeOH3, fdtSO4, fdCH4, fox
 end # function degradationfactors
+
 
 function degrade(
     dO2::Float64,
@@ -97,12 +100,14 @@ function degrade(
     )
 end # function degrade
 
+
 # Redox reaction first order rate constants for deep sea from Boudreau (1996)
 # All in mol/m^3/a
 const kMnII_redox = 1e6
 const kFeII_redox = 1e6
 const kNH3_redox = 1e4
 const kH2S_redox = 3e5
+
 
 "Redox reaction rates."
 function redox(
