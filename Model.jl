@@ -204,15 +204,15 @@ D_dtNH4 = Params.D_dtNH4(T)
 D_dtH2S = Params.D_dtH2S(T)
 D_dMnII = Params.D_dMn(T)
 D_dFeII = Params.D_dFe(T)
-D_dO2_tort2 = D_dO2./tort2
-D_dtCO2_tort2 = D_dtCO2./tort2
-D_dtNO3_tort2 = D_dtNO3./tort2
-D_dtSO4_tort2 = D_dtSO4./tort2
-D_dtPO4_tort2 = D_dtPO4./tort2
-D_dtNH4_tort2 = D_dtNH4./tort2
-D_dtH2S_tort2 = D_dtH2S./tort2
-D_dMnII_tort2 = D_dMnII./tort2
-D_dFeII_tort2 = D_dFeII./tort2
+D_dO2_tort2 = D_dO2 ./ tort2
+D_dtCO2_tort2 = D_dtCO2 ./ tort2
+D_dtNO3_tort2 = D_dtNO3 ./ tort2
+D_dtSO4_tort2 = D_dtSO4 ./ tort2
+D_dtPO4_tort2 = D_dtPO4 ./ tort2
+D_dtNH4_tort2 = D_dtNH4 ./ tort2
+D_dtH2S_tort2 = D_dtH2S ./ tort2
+D_dMnII_tort2 = D_dMnII ./ tort2
+D_dFeII_tort2 = D_dFeII ./ tort2
 
 # Irrigation (for solutes)
 alpha_0 = Params.alpha_0(Fpoc, dO2_w)  # [/a] from Archer et al (2002)
@@ -221,7 +221,7 @@ alpha = Params.alpha(alpha_0, depths, lambda_i)  # [/a] Archer et al (2002)
 # Miscellaneous convenience variables
 APPW = Params.APPW(w, delta_D_bio, delta_phiS, D_bio, phiS)
 TR = Params.TR(z_res, tort2[2], dbl)
-zr_Db_0 = 2.0z_res/D_bio[2]
+zr_Db_0 = 2.0z_res / D_bio[2]
 # ^^^ NOT YET IN THE PARAMETERS PART OF THE DOCUMENTATION ^^^^^^^^^^^^^^^^^^
 
 "Prepare Solute with a constant start value."
@@ -248,7 +248,7 @@ function makeSolid(var_start::Float64, above::Float64, D_var::Array{Float64})
     var_start = fill(var_start, ndepths)
     var_start[1] = NaN
     var_start[end] = NaN
-    above_phiS_0 = above/phiS[2]
+    above_phiS_0 = above / phiS[2]
     var_save = fill(NaN, (ndepths-2, nsps+1))
     var_save[:, 1] = var_start[2:end-1]
     return Solid(var_start, above_phiS_0, D_var, var_save)
@@ -258,7 +258,7 @@ end  # function makeSolid
 function makeSolid(var_start::Array{Float64,1}, above::Float64,
         D_var::Array{Float64})
     var_start = vcat(NaN, var_start, NaN)
-    above_phiS_0 = above/phiS[2]
+    above_phiS_0 = above / phiS[2]
     var_save = fill(NaN, (ndepths-2, nsps+1))
     var_save[:, 1] = var_start[2:end-1]
     return Solid(var_start, above_phiS_0, D_var, var_save)
@@ -311,7 +311,7 @@ function advectsolute(then_z1p::Float64, then_z1m::Float64, u_z::Float64,
         delta_phi_z::Float64, phi_z::Float64, delta_tort2i_tort2_z::Float64,
         D_var::Float64)
     return -(u_z - delta_phi_z*D_var/phi_z -
-        D_var*delta_tort2i_tort2_z)*(then_z1p - then_z1m)/(2.0z_res)
+        D_var*delta_tort2i_tort2_z) * (then_z1p - then_z1m)/(2.0z_res)
 end  # function advect
 
 "Advect a Solute."

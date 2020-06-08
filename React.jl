@@ -2,17 +2,17 @@ module React
 
 # Monod scheme constants in mol/m^3
 # For oxygen and nitrate from Soetaert et al. 1996 (GCA)
-KM_dO2 = 0.003
-KMi_dO2 = 0.01
-KM_dtNO3 = 0.03
-KMi_dtNO3 = 0.005
+const KM_dO2 = 0.003
+const KMi_dO2 = 0.01
+const KM_dtNO3 = 0.03
+const KMi_dtNO3 = 0.005
 # For others from van Cappellen and Wang (1996)
-KM_pMnO2 = 42.4
-KMi_pMnO2 = 42.4
-KM_pFeOH3 = 265.0
-KMi_pFeOH3 = 265.0
-KM_dtSO4 = 1.6
-KMi_dtSO4 = 1.6
+const KM_pMnO2 = 42.4
+const KMi_pMnO2 = 42.4
+const KM_pFeOH3 = 265.0
+const KMi_pFeOH3 = 265.0
+const KM_dtSO4 = 1.6
+const KMi_dtSO4 = 1.6
 
 # Monod scheme inhibition factors
 inhibition_dO2(dO2::Float64) = KMi_dO2 / (KMi_dO2 + dO2)
@@ -99,10 +99,10 @@ end # function degrade
 
 # Redox reaction first order rate constants for deep sea from Boudreau (1996)
 # All in mol/m^3/a
-kMnII_redox = 1e6
-kFeII_redox = 1e6
-kNH3_redox = 1e4
-kH2S_redox = 3e5
+const kMnII_redox = 1e6
+const kFeII_redox = 1e6
+const kNH3_redox = 1e4
+const kH2S_redox = 3e5
 
 "Redox reaction rates."
 function redox(

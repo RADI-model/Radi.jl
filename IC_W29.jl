@@ -14,15 +14,15 @@ z_max = 20e-2  # total height of the modelled sediment column
 dbl = 1e-3
 
 # Define sediment porosity parameters
-phiInf = 0.74  # sediment porosity at infinite depth
-phi0 = 0.85  # sediment porosity at the surface
-beta = 33.0  # sediment porosity-depth relationship parameter
+const phiInf = 0.74  # sediment porosity at infinite depth
+const phi0 = 0.85  # sediment porosity at the surface
+const beta = 33.0  # sediment porosity-depth relationship parameter
 
 # Define characteristic depths
-lambda_b = 0.08  # for bioturbation / m
-lambda_f = 0.03  # for fast-degrading POC / m
-lambda_s = 1.0  # for slow-degrading POC / m
-lambda_i = 0.05  # for irrigation / m
+const lambda_b = 0.08  # for bioturbation / m
+const lambda_f = 0.03  # for fast-degrading POC / m
+const lambda_s = 1.0  # for slow-degrading POC / m
+const lambda_i = 0.05  # for irrigation / m
 
 # Define overlying water column properties
 T = 1.4  # temperature / degC
