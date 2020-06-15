@@ -49,7 +49,7 @@ function degradationfactors(
         pFeOH3 / (KM_pFeOH3 + pFeOH3)
     fdtSO4 = Mi_dO2 * Mi_dtNO3 * Mi_pMnO2 * Mi_pFeOH3 *
         dtSO4 / (KM_dtSO4 + dtSO4)
-    fdCH4 = Mi_dO2 * Mi_dtNO3 * Mi_pMnO2 * Mi_pFeOH3 * KMi_dtSO4
+    fdCH4 = Mi_dO2 * Mi_dtNO3 * Mi_pMnO2 * Mi_pFeOH3 * Mi_dtSO4
     fox = fdO2 + fdtNO3 + fpMnO2 + fpFeOH3 + fdtSO4 + fdCH4
     return fdO2, fdtNO3, fpMnO2, fpFeOH3, fdtSO4, fdCH4, fox
 end # function degradationfactors

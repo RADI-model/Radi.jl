@@ -83,6 +83,7 @@ function stoichiometry(T::Float64, S::Float64, P::Float64, dtPO4_w::Float64,
     Mpom = Params.rmm_pom(RC, RN, RP)
     Fpom_mol = Fpom/Mpom
     Fpoc = Fpom_mol*RC
+
 end  # function stoichiometry
 
 "Run the iterative Radi model."
@@ -152,6 +153,7 @@ RC, RN, RP = Params.redfield(dtPO4_w, rho_sw)
 Mpom = Params.rmm_pom(RC, RN, RP)  # g/mol
 Fpom_mol = Fpom / Mpom  # mol/m^2/a
 Fpoc = Fpom_mol * RC  # mol/m^2/a
+
 # Split total flux into fast-slow-refractory portions
 Ffoc = Fpoc*Fpom_f
 Fsoc = Fpoc*Fpom_s
@@ -168,6 +170,7 @@ Fp = Fpom + FMnO2*M_MnO2 + FFeOH3*M_FeOH3
 D_bio_0 = Params.D_bio_0(Fpoc)
 # ^[m2/a] surf bioturb coeff, Archer et al. (2002)
 D_bio = Params.D_bio(depths, D_bio_0, lambda_b, dO2_w)
+println(D_bio)
 # ^[m2/a] bioturb coeff, Archer et al (2002)
 delta_D_bio = Params.delta_D_bio(depths, D_bio, lambda_b)
 
@@ -176,6 +179,7 @@ krefractory = Params.krefractory(depths, D_bio_0)
 kfast = Params.kfast(Fpoc, depths, lambda_f)
 kslow = Params.kslow(Fpoc, depths, lambda_s)
 # ^[/a] from Archer et al (2002)
+println(kslow)
 
 # Solid fluxes and solid initial conditions
 x0 = Params.x0(Fp, rho_p, phiS[2])
