@@ -32,13 +32,15 @@ rho_sw = gsw_rho(S, T, P) # seawater density / kg/m^3
 # Concentrations all in mol/m^3
 dO2_w = 159.7e-6rho_sw  # dissolved oxygen
 dtCO2_w = 2324e-6rho_sw  # dissolved inorganic carbon
-dtNO3_w = 36.93e-6rho_sw  # nitrate from GLODAP at sation location, bottom waters
+dtNO3_w = 36.93e-6rho_sw  # nitrate from GLODAP at station location, bottom waters
 dtSO4_w = (29264.2e-6S/35)rho_sw  # estimated omputed from salinity (Millero, 2013)
 dtPO4_w = 2.39e-6rho_sw  # total phosphate
 dtNH4_w = 1e-6rho_sw  # typical for deep-sea oxic bottom waters (Archer et al., 2002)
 dtH2S_w = 0.0  # assumed
 dFeII_w = 2e-6rho_sw  # typical for deep-sea oxic bottom waters (Archer et al., 2002)
 dMnII_w = 0.0  # typical for deep-sea oxic bottom waters (Archer et al., 2002)
+dAlk_w = 2426.0  # total alkalinity from GLODAP at station location, bottom waters
+dCa_w = 0.02128 / 40.087 * S / 1.80655  # calcium from salinity (RT67 via PyCO2SYS)
 
 # Define organic matter flux to the surface sediment
 Fpom = 3.645  # flux of POM to seafloor / g/m^2/a
@@ -59,6 +61,8 @@ dtNH4_i = dtNH4_w
 dtH2S_i = dtH2S_w
 dFeII_i = dFeII_w
 dMnII_i = dMnII_w
+dAlk_i = dAlk_w
+dCa_i = dCa_w
 pfoc_i = 3e2  # fast-degrading particulate organic carbon / unit?
 psoc_i = 3e3  # slow-degrading particulate organic carbon / unit?
 proc_i = 3e4  # refractory particulate organic carbon / unit?

@@ -1,9 +1,6 @@
 module Radi
 
 using MAT
-using Colors, Plots
-Plots.default(show=true)
-Plots.closeall()
 include("gsw_rho.jl")
 include("Model.jl")
 
@@ -25,6 +22,8 @@ function go(initial::Dict)
         dtH2S,
         dFeII,
         dMnII,
+        dAlk,
+        dCa,
         pfoc,
         psoc,
         proc,
@@ -56,6 +55,8 @@ function go(initial::Dict)
         dtH2S_w,
         dFeII_w,
         dMnII_w,
+        dAlk_w,
+        dCa_w,
         Fpom,
         Fpom_r,
         Fpom_s,
@@ -72,6 +73,8 @@ function go(initial::Dict)
         initial[:dtH2S],
         initial[:dFeII],
         initial[:dMnII],
+        initial[:dAlk],
+        initial[:dCa],
         initial[:pfoc],
         initial[:psoc],
         initial[:proc],
@@ -90,6 +93,8 @@ function go(initial::Dict)
         :dtH2S => dtH2S,
         :dFeII => dFeII,
         :dMnII => dMnII,
+        :dAlk => dAlk,
+        :dCa => dCa,
         :pfoc => pfoc,
         :psoc => psoc,
         :proc => proc,
@@ -111,6 +116,8 @@ function again(results::Dict)
         :dtH2S,
         :dFeII,
         :dMnII,
+        :dAlk,
+        :dCa,
         :pfoc,
         :psoc,
         :proc,
@@ -147,6 +154,8 @@ initial = Dict(
     :dtH2S => dtH2S_i,
     :dFeII => dFeII_i,
     :dMnII => dMnII_i,
+    :dAlk => dAlk_i,
+    :dCa => dCa_i,
     :pfoc => pfoc_i,
     :psoc => psoc_i,
     :proc => proc_i,
