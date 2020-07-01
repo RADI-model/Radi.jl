@@ -112,7 +112,7 @@ function timeloop(
     dtH2S_w::Float64,
     dFeII_w::Float64,
     dMnII_w::Float64,
-    dAlk_w::Float64,
+    dalk_w::Float64,
     dCa_w::Float64,
     Fpom::Float64,
     Fpom_r::Float64,
@@ -130,7 +130,7 @@ function timeloop(
     dtH2S_i::FloatOrArray,
     dFeII_i::FloatOrArray,
     dMnII_i::FloatOrArray,
-    dAlk_i::FloatOrArray,
+    dalk_i::FloatOrArray,
     dCa_i::FloatOrArray,
     pfoc_i::FloatOrArray,
     psoc_i::FloatOrArray,
@@ -208,7 +208,7 @@ D_dtNH4 = Params.D_dtNH4(T)
 D_dtH2S = Params.D_dtH2S(T)
 D_dMnII = Params.D_dMn(T)
 D_dFeII = Params.D_dFe(T)
-D_dAlk = Params.D_dHCO3(T)
+D_dalk = Params.D_dHCO3(T)
 D_dCa = Params.D_dCa(T)
 D_dO2_tort2 = D_dO2 ./ tort2
 D_dtCO2_tort2 = D_dtCO2 ./ tort2
@@ -219,7 +219,7 @@ D_dtNH4_tort2 = D_dtNH4 ./ tort2
 D_dtH2S_tort2 = D_dtH2S ./ tort2
 D_dMnII_tort2 = D_dMnII ./ tort2
 D_dFeII_tort2 = D_dFeII ./ tort2
-D_dAlk_tort2 = D_dAlk ./ tort2
+D_dalk_tort2 = D_dalk ./ tort2
 D_dCa_tort2 = D_dCa ./ tort2
 
 # Irrigation (for solutes)
@@ -378,7 +378,7 @@ dtNH4 = makeSolute(dtNH4_i, dtNH4_w, D_dtNH4_tort2)
 dtH2S = makeSolute(dtH2S_i, dtH2S_w, D_dtH2S_tort2)
 dFeII = makeSolute(dFeII_i, dFeII_w, D_dFeII_tort2)
 dMnII = makeSolute(dMnII_i, dMnII_w, D_dMnII_tort2)
-dAlk = makeSolute(dAlk_i, dAlk_w, D_dAlk_tort2)
+dalk = makeSolute(dalk_i, dalk_w, D_dalk_tort2)
 dCa = makeSolute(dCa_i, dCa_w, D_dCa_tort2)
 pfoc = makeSolid(pfoc_i, Ffoc, D_bio)
 psoc = makeSolid(psoc_i, Fsoc, D_bio)
@@ -398,7 +398,7 @@ for t in 1:ntps
     substitute!(dtH2S)
     substitute!(dFeII)
     substitute!(dMnII)
-    substitute!(dAlk)
+    substitute!(dalk)
     substitute!(dCa)
     substitute!(pfoc)
     substitute!(psoc)
@@ -445,9 +445,9 @@ for t in 1:ntps
         diffuse!(dMnII, z)
         irrigate!(dMnII, z)
         # Total alkalinity (solute)
-        advect!(dAlk, z)
-        diffuse!(dAlk, z)
-        irrigate!(dAlk, z)
+        advect!(dalk, z)
+        diffuse!(dalk, z)
+        irrigate!(dalk, z)
         # Calcium (solute)
         advect!(dCa, z)
         diffuse!(dCa, z)
@@ -475,7 +475,7 @@ for t in 1:ntps
             rate_dtH2S,
             rate_dFeII,
             rate_dMnII,
-            rate_dAlk,
+            rate_dalk,
             rate_dCa,
             rate_pfoc,
             rate_psoc,
@@ -507,7 +507,7 @@ for t in 1:ntps
         react!(dtH2S, z, rate_dtH2S)
         react!(dFeII, z, rate_dFeII)
         react!(dMnII, z, rate_dMnII)
-        react!(dAlk, z, rate_dAlk)
+        react!(dalk, z, rate_dalk)
         react!(dCa, z, rate_dCa)
         react!(pfoc, z, rate_pfoc)
         react!(psoc, z, rate_psoc)
@@ -526,7 +526,7 @@ for t in 1:ntps
             dtH2S.save[z-1, sp+1] = dtH2S.now[z]
             dFeII.save[z-1, sp+1] = dFeII.now[z]
             dMnII.save[z-1, sp+1] = dMnII.now[z]
-            dAlk.save[z-1, sp+1] = dAlk.now[z]
+            dalk.save[z-1, sp+1] = dalk.now[z]
             dCa.save[z-1, sp+1] = dCa.now[z]
             pfoc.save[z-1, sp+1] = pfoc.now[z]
             psoc.save[z-1, sp+1] = psoc.now[z]
@@ -550,7 +550,7 @@ for t in 1:ntps
         dtH2S.then[z] = dtH2S.now[z]
         dFeII.then[z] = dFeII.now[z]
         dMnII.then[z] = dMnII.now[z]
-        dAlk.then[z] = dAlk.now[z]
+        dalk.then[z] = dalk.now[z]
         dCa.then[z] = dCa.now[z]
         pfoc.then[z] = pfoc.now[z]
         psoc.then[z] = psoc.now[z]
@@ -577,7 +577,7 @@ return (
     dtH2S.save,
     dFeII.save,
     dMnII.save,
-    dAlk.save,
+    dalk.save,
     dCa.save,
     pfoc.save,
     psoc.save,

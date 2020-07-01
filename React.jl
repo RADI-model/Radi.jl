@@ -232,7 +232,7 @@ function reactions2rates(
     rate_pMnO2 = RC * -Rdeg_pMnO2*2.0 + d2p * R_dMnII
     # Total alkalinity and calcium
     rate_dCa = p2d * Rdiss_CaCO3
-    rate_dAlk = p2d * (
+    rate_dalk = p2d * (
         (RN - RP) * (Rdeg_dO2 + Rdeg_dCH4)
         + (RN - RP + 0.8RC) * Rdeg_dtNO3
         + (RN - RP + 4.0RC) * Rdeg_pMnO2
@@ -251,7 +251,7 @@ function reactions2rates(
         rate_dtH2S,
         rate_dFeII,
         rate_dMnII,
-        rate_dAlk,
+        rate_dalk,
         rate_dCa,
         rate_pfoc,
         rate_psoc,
