@@ -134,6 +134,12 @@ D_dMn(T::Float64) = 0.0086 + 0.001525T
 "Iron diffusion coefficient from Li and Gregory (1974) in m^2/a."
 D_dFe(T::Float64) = 0.0108 + 0.001478T
 
+"Bicarbonate diffusion coefficient from Hulse et al. (2018) in m^2/a."
+D_dHCO3(T::Float64) = 0.015169 + 0.000793T
+
+"Calcium diffusion coefficient from Li and Gregory (1974) in m^2/a."
+D_dCa(T::Float64) = 0.0107 + 0.001677T
+
 "Calculate alpha_0 parameter for irrigation (Archer et al. 2002)."
 function alpha_0(Fpoc::Float64, dO2_w::Float64)
     return @. 11.0*(atan((1e2Fpoc*5.0 - 400.0)/400.0)/pi + 0.5) - 0.9 +

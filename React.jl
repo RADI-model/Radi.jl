@@ -229,6 +229,13 @@ function reactions2rates(
     rate_psoc = -Rslow_total
     rate_pFeOH3 = RC * -Rdeg_pFeOH3*4.0 + d2p * R_dFeII
     rate_pMnO2 = RC * -Rdeg_pMnO2*2.0 + d2p * R_dMnII
+    # CaCO3 dissolution
+    Rdiss_CaCO3 = 0.0
+    rate_dCa = p2d * Rdiss_CaCO3
+    # Total alkalinity
+    rate_dAlk = p2d * (
+        0.0
+    )
     return (
         rate_dO2,
         rate_dtCO2,
@@ -239,6 +246,8 @@ function reactions2rates(
         rate_dtH2S,
         rate_dFeII,
         rate_dMnII,
+        rate_dAlk,
+        rate_dCa,
         rate_pfoc,
         rate_psoc,
         rate_pFeOH3,
