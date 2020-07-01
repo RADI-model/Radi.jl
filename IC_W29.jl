@@ -2,7 +2,7 @@
 modelrun = "IC_W29"
 
 # Define model timesteps (all times in years)
-stoptime = 10.0  # how long to run for
+stoptime = 5.0  # how long to run for
 interval = 1/128000  # duration of each model timestep
 saveperXsteps = 128000  # save results in intervals of this many timesteps
 
