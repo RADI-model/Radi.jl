@@ -14,7 +14,6 @@ const KMi_pFeOH3 = 265.0
 const KM_dtSO4 = 1.6
 const KMi_dtSO4 = 1.6
 
-
 # Monod scheme inhibition factors
 inhibition_dO2(dO2::Float64) = KMi_dO2 / (KMi_dO2 + dO2)
 inhibition_dtNO3(dtNO3::Float64) = KMi_dtNO3 / (KMi_dtNO3 + dtNO3)
@@ -213,12 +212,14 @@ function reactions2rates(
     Rdeg_pMnO2 = Rfast_pMnO2 + Rslow_pMnO2
     Rdeg_dCH4 = Rfast_dCH4 + Rslow_dCH4
     Rdeg_total = Rfast_total + Rslow_total
+    # CaCO3 dissolution (temporary)
+    Rdiss_CaCO3 = 0.0
     # Total changes in porewater/sediment components from reaction rates
     p2d = phiS_phi_z  # convert particulate to dissolved
     d2p = 1.0 / phiS_phi_z  # convert dissolved to particulate
     rate_dO2 = p2d * -Rdeg_dO2 - (R_dFeII/4.0 + R_dMnII/2.0 + R_dH2S*2.0 + R_dNH3*2.0)
-    rate_dtCO2 = p2d * RC * (Rdeg_total - Rdeg_dCH4/2.0)
-    rate_dtNO3 = p2d * RC * -Rdeg_dtNO3*4.0/5.0 + R_dNH3
+    rate_dtCO2 = p2d * (RC * (Rdeg_total - Rdeg_dCH4/2.0) + Rdiss_CaCO3)
+    rate_dtNO3 = p2d * RC * -Rdeg_dtNO3*0.8 + R_dNH3
     rate_dtSO4 = p2d * RC * -Rdeg_dtSO4/2.0 + R_dH2S
     rate_dtPO4 = p2d * RP * Rdeg_total
     rate_dtNH4 = p2d * RN * Rdeg_total - R_dNH3
@@ -229,12 +230,16 @@ function reactions2rates(
     rate_psoc = -Rslow_total
     rate_pFeOH3 = RC * -Rdeg_pFeOH3*4.0 + d2p * R_dFeII
     rate_pMnO2 = RC * -Rdeg_pMnO2*2.0 + d2p * R_dMnII
-    # CaCO3 dissolution
-    Rdiss_CaCO3 = 0.0
+    # Total alkalinity and calcium
     rate_dCa = p2d * Rdiss_CaCO3
-    # Total alkalinity
     rate_dAlk = p2d * (
-        0.0
+        (RN - RP) * (Rdeg_dO2 + Rdeg_dCH4)
+        + (RN - RP + 0.8RC) * Rdeg_dtNO3
+        + (RN - RP + 4.0RC) * Rdeg_pMnO2
+        + (RN - RP + 8.0RC) * Rdeg_pFeOH3
+        + (RN - RP + 1.0RC) * Rdeg_dtSO4
+        - 2.0 * (R_dMnII + R_dFeII + R_dNH3 + R_dH2S)
+        + 2.0 * Rdiss_CaCO3
     )
     return (
         rate_dO2,
