@@ -556,7 +556,7 @@ for t in 1:ntps
             end
         end
     end  # for z in 2:(ndepths-1)
-    # Copy results into "previous step" arrays
+    # Copy results into "previous step" arrays *after* whole sediment column is processed
     @simd for z in 2:(ndepths-1)
         dO2.then[z] = dO2.now[z]
         dtCO2.then[z] = dtCO2.now[z]
