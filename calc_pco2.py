@@ -52,6 +52,10 @@ discr = b_h ** 2 - 4 * ks["K1"] * ks["K2"] * (1 - 2 * gamma)
 h_new = (np.sqrt(discr) - b_h) / 2
 pH_new = -np.log10(h_new)
 
+# Do a single NR jump, for comparison
+delta_pH = pyco2.solve.delta.pHfromTATC(pH_guess, alk, dic, free2tot, totals, ks)
+pH_NR = pH_guess + delta_pH
+
 # Get true pH
 pH_true = pyco2.solve.get.pHfromTATC(alk, dic, totals, ks)
 
@@ -59,6 +63,7 @@ pH_true = pyco2.solve.get.pHfromTATC(alk, dic, totals, ks)
 fig, ax = plt.subplots(dpi=300)
 ax.plot(pH_guess, pH_guess, c="xkcd:ocean blue", label="Initial guess")
 ax.plot(pH_guess, pH_new, c="xkcd:reddish orange", label="Final estimate")
+ax.plot(pH_guess, pH_NR, c="xkcd:goldenrod", alpha=0.9, label="Newton-Raphson")
 ax.plot(pH_guess, pH_true, c="k", label="True value")
 ax.set_aspect("equal")
 ax.set_xlim([7, 9])
