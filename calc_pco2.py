@@ -10,8 +10,8 @@ mpl.rcParams["font.size"] = mpl.rcParams["axes.titlesize"] = 10
 npts = 100
 pH_guess = np.linspace(7.0, 9.0, npts)
 alk = np.full(npts, 2300.0) * 1e-6
-dic = np.full(npts, 2050.0) * 1e-6
-tempC = np.full(npts, 25.0)
+dic = np.full(npts, 2101.0) * 1e-6
+tempC = np.full(npts, 15.0)
 pres = np.full(npts, 0.0)
 psal = np.full(npts, 35.0)
 silicate = np.full(npts, 0.0) * 1e-6
