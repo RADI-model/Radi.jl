@@ -29,6 +29,9 @@ function go(initial::Dict)
         proc,
         pFeOH3,
         pMnO2,
+        pcalcite,
+        paragonite,
+        pclay,
     ) = Model.timeloop(
         stoptime,
         interval,
@@ -63,6 +66,9 @@ function go(initial::Dict)
         Fpom_f,
         FMnO2,
         FFeOH3,
+        Fcalcite,
+        Faragonite,
+        Fclay,
         rho_p,
         initial[:dO2],
         initial[:dtCO2],
@@ -80,6 +86,9 @@ function go(initial::Dict)
         initial[:proc],
         initial[:pFeOH3],
         initial[:pMnO2],
+        initial[:pcalcite],
+        initial[:paragonite],
+        initial[:pclay],
     )
     return Dict(
         :savetimes => savetimes,
@@ -100,6 +109,9 @@ function go(initial::Dict)
         :proc => proc,
         :pFeOH3 => pFeOH3,
         :pMnO2 => pMnO2,
+        :pcalcite => pcalcite,
+        :paragonite => paragonite,
+        :pclay => pclay,
     )
 end  # function go
 
@@ -123,6 +135,9 @@ function again(results::Dict)
         :proc,
         :pFeOH3,
         :pMnO2,
+        :pcalcite,
+        :paragonite,
+        :pclay,
     )
     initial = Dict(i => results[i][:, end] for i in initials)
     go(initial)
@@ -161,6 +176,9 @@ initial = Dict(
     :proc => proc_i,
     :pFeOH3 => pFeOH3_i,
     :pMnO2 => pMnO2_i,
+    :pcalcite => pcalcite_i,
+    :paragonite => paragonite_i,
+    :pclay => pclay_i,
 )
 results = go(initial)
 save(results)

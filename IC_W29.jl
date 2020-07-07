@@ -49,6 +49,9 @@ Fpom_s = 0.15  # slow-degrading fraction of POM
 Fpom_f = 0.7  # fast-degrading fraction of POM
 FMnO2 = 0.0035  # typical for deep-sea oxic bottom waters (Archer et al., 2002; Boudreau, 1996)
 FFeOH3 = 0.0035  # typical for deep-sea oxic bottom waters (Archer et al., 2002; Boudreau, 1996)
+Fcalcite = 0.1  # flux of calcite to the seafloor / mol/m^2/a
+Faragonite = 0.1  # flux of aragonite to the seafloor / mol/m^2/a
+Fclay = 2.0 / 360.31  # flux of clay (montmorillonite) to the seafloor / mol/m^2/a
 rho_p = 2.65e6  # average density of all solid matter / g/m^3
 
 # Define initial conditions within the sediment (scalars or arrays)
@@ -68,3 +71,6 @@ psoc_i = 3e3  # slow-degrading particulate organic carbon / unit?
 proc_i = 3e4  # refractory particulate organic carbon / unit?
 pFeOH3_i = 0.0
 pMnO2_i = 0.0
+pcalcite_i = 0.0
+paragonite_i = 0.0
+pclay_i = 0.0

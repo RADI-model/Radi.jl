@@ -110,6 +110,9 @@ function timeloop(
     Fpom_f::Float64,
     FMnO2::Float64,
     FFeOH3::Float64,
+    Fcalcite::Float64,
+    Faragonite::Float64,
+    Fclay::Float64,
     rho_p::Float64,
     dO2_i::FloatOrArray,
     dtCO2_i::FloatOrArray,
@@ -127,6 +130,9 @@ function timeloop(
     proc_i::FloatOrArray,
     pFeOH3_i::FloatOrArray,
     pMnO2_i::FloatOrArray,
+    pcalcite_i::FloatOrArray,
+    paragonite_i::FloatOrArray,
+    pclay_i::FloatOrArray,
 )
 
 println("Radi preparing to run...")
@@ -157,7 +163,9 @@ end
 # `Fp` = total sediment flux to bottom in g/m^2/a
 M_MnO2 = 86.9368  # g/mol
 M_FeOH3 = 106.867  # g/mol
-Fp = Fpom + FMnO2*M_MnO2 + FFeOH3*M_FeOH3
+M_CaCO3 = 100.0869  # g/mol
+M_clay = 360.31  # g/mol (montmorillonite)
+Fp = Fpom + FMnO2*M_MnO2 + FFeOH3*M_FeOH3 + (Fcalcite + Faragonite)*M_CaCO3 + Fclay*M_clay
 
 # Bioturbation (for solids)
 D_bio_0 = Params.D_bio_0(Fpoc)
@@ -376,6 +384,9 @@ psoc = makeSolid(psoc_i, Fsoc, D_bio)
 proc = makeSolid(proc_i, Froc, D_bio)
 pFeOH3 = makeSolid(pFeOH3_i, FFeOH3, D_bio)
 pMnO2 = makeSolid(pMnO2_i, FMnO2, D_bio)
+pcalcite = makeSolid(pcalcite_i, Fcalcite, D_bio)
+paragonite = makeSolid(paragonite_i, Faragonite, D_bio)
+pclay = makeSolid(pclay_i, Fclay, D_bio)
 # Main Radi model loop
 for t in 1:ntps
     tsave = t in savepoints  # i.e. do we save after this step?
@@ -396,6 +407,9 @@ for t in 1:ntps
     substitute!(proc)
     substitute!(pFeOH3)
     substitute!(pMnO2)
+    substitute!(pcalcite)
+    substitute!(paragonite)
+    substitute!(pclay)
     @simd for z in 2:(ndepths-1)
     # ~~~ BEGIN SEDIMENT PROCESSING ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         # --- First, do all the physical processes -----------------------------
@@ -455,6 +469,12 @@ for t in 1:ntps
         diffuse!(pFeOH3, z)
         advect!(pMnO2, z)
         diffuse!(pMnO2, z)
+        advect!(pcalcite, z)
+        diffuse!(pcalcite, z)
+        advect!(paragonite, z)
+        diffuse!(paragonite, z)
+        advect!(pclay, z)
+        diffuse!(pclay, z)
         # --- Then do the reactions! -------------------------------------------
         (
             rate_dO2,
@@ -505,6 +525,9 @@ for t in 1:ntps
         # react!(proc, z, 0.0)  # "refractory" means it doesn't react!
         react!(pFeOH3, z, rate_pFeOH3)
         react!(pMnO2, z, rate_pMnO2)
+        # react!(pcalcite, z, rate_pcalcite)
+        # react!(paragonite, z, rate_paragonite)
+        # react!(pclay, z, rate_pclay)
     # ~~~ END SEDIMENT PROCESSING ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         # Save output if we are at a savepoint
         if tsave
@@ -524,6 +547,9 @@ for t in 1:ntps
             proc.save[z-1, sp+1] = proc.now[z]
             pFeOH3.save[z-1, sp+1] = pFeOH3.now[z]
             pMnO2.save[z-1, sp+1] = pMnO2.now[z]
+            pcalcite.save[z-1, sp+1] = pcalcite.now[z]
+            paragonite.save[z-1, sp+1] = paragonite.now[z]
+            pclay.save[z-1, sp+1] = pclay.now[z]
             if z == ndepths-1
                 println("Radi reached savepoint $sp of $nsps (step $t of $ntps)...")
                 sp += 1
@@ -548,6 +574,9 @@ for t in 1:ntps
         proc.then[z] = proc.now[z]
         pFeOH3.then[z] = pFeOH3.now[z]
         pMnO2.then[z] = pMnO2.now[z]
+        pcalcite.then[z] = pcalcite.now[z]
+        paragonite.then[z] = paragonite.now[z]
+        pclay.then[z] = pclay.now[z]
     end  # for z in 2:(ndepths-1)
 end  # for t, main Radi model loop
 # ===== End of main model loop =================================================
@@ -575,6 +604,9 @@ return (
     proc.save,
     pFeOH3.save,
     pMnO2.save,
+    pcalcite.save,
+    paragonite.save,
+    pclay.save,
 )
 end  # function model
 
