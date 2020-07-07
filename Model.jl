@@ -75,16 +75,6 @@ function porosity(phi0::Float64, phiInf::Float64, beta::Float64,
     return phi, phiS, phiS_phi, tort2, delta_phi, delta_phiS, delta_tort2i_tort2
 end  # function porosity
 
-"Define 'Redfield' ratios and OM stoichiometry."
-function stoichiometry(T::Float64, S::Float64, P::Float64, dtPO4_w::Float64,
-        Fpom::Float64)
-    rho_sw = gsw_rho(S, T, P)  # seawater density [kg/m^3]
-    RC, RN, RP = Params.redfield(dtPO4_w, rho_sw)
-    Mpom = Params.rmm_pom(RC, RN, RP)
-    Fpom_mol = Fpom/Mpom
-    Fpoc = Fpom_mol*RC
-end  # function stoichiometry
-
 "Run the iterative Radi model."
 function timeloop(
     stoptime::Float64,
@@ -152,7 +142,8 @@ phi, phiS, phiS_phi, tort2, delta_phi, delta_phiS, delta_tort2i_tort2 =
 
 # Define 'Redfield' ratios and OM stoichiometry
 rho_sw = gsw_rho(S, T, P)  # seawater density [kg/m^3]
-RC, RN, RP = Params.redfield(dtPO4_w, rho_sw)
+# RC, RN, RP = Params.redfield(dtPO4_w, rho_sw)  # for P-variable ratios
+RC, RN, RP = Params.redfield()  # for constant, canonical Redfield values
 Mpom = Params.rmm_pom(RC, RN, RP)  # g/mol
 Fpom_mol = Fpom / Mpom  # mol/m^2/a
 Fpoc = Fpom_mol * RC  # mol/m^2/a

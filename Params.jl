@@ -9,6 +9,14 @@ function redfield(dtPO4_w::Float64, rho_sw::Float64)
     return 1.0, RN / RC, RP / RC
 end  # function redfield
 
+"Evaluate the 'Redfield' ratios for particulate organic matter, normalised to C."
+function redfield()
+    RC = 106.0
+    RN = 16.0
+    RP = 1.0
+    return 1.0, RN / RC, RP / RC
+end  # function redfield
+
 "Calculate the relative molar mass of POM in g/mol."
 function rmm_pom(RC::Float64, RN::Float64, RP::Float64)
     rmm_CH2O = 30.031 # g/mol
