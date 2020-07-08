@@ -1,9 +1,10 @@
 module Model
 
-using Base.SimdLoop
+using Base.SimdLoop, PyCall
 include("gsw_rho.jl")
 include("Params.jl")
 include("React.jl")
+include("Equilibrate.jl")
 
 "Define Solute type."
 struct Solute
@@ -26,13 +27,13 @@ end  # struct Solute
 "Constructor for a Solute."
 function Solute(var_start::Array{Float64,1}, above::Float64,
         dvar::Array{Float64,1}, var_save::Array{Float64,2})
-    return Solute(copy(var_start), copy(var_start), above, dvar, var_save)
+    Solute(copy(var_start), copy(var_start), above, dvar, var_save)
 end  # function Solute
 
 "Constructor for a Solid."
 function Solid(var_start::Array{Float64,1}, above::Float64,
         dvar::Array{Float64,1}, var_save::Array{Float64,2})
-    return Solid(copy(var_start), copy(var_start), above, dvar, var_save)
+    Solid(copy(var_start), copy(var_start), above, dvar, var_save)
 end  # function Solid
 
 SoluteOrSolid = SolidOrSolute = Union{Solid,Solute}
@@ -231,6 +232,31 @@ TR = Params.TR(z_res, tort2[2], dbl)
 zr_Db_0 = 2.0z_res / D_bio[2]
 # ^^^ NOT YET IN THE PARAMETERS PART OF THE DOCUMENTATION ^^^^^^^^^^^^^^^^^^
 
+# Equilibrium constants and total concentrations from PyCO2SYS
+pyco2 = pyimport("PyCO2SYS")
+WhichKs = 16
+WhoseTB = 2
+totals = pyco2.salts.assemble(S, 0.0, 0.0, 0.0, 0.0, WhichKs, WhoseTB)
+ks = pyco2.equilibria.assemble([T], [P], totals, [1], [16], [1], [1], [1])
+TB = totals["TB"][1]
+TF = totals["TF"][1]
+K1 = ks["K1"][1]
+K2 = ks["K2"][1]
+KB = ks["KB"][1]
+# KSi = ks["KSi"][1]
+Kw = ks["KW"][1]
+KP1 = ks["KP1"][1]
+KP2 = ks["KP2"][1]
+KP3 = ks["KP3"][1]
+KNH3 = ks["KNH3"][1]
+KH2S = ks["KH2S"][1]
+KSO4 = ks["KSO4"][1]
+# Get initial pH
+dalk_pH = typeof(dalk_i) == Float64 ? [dalk_i] : dalk_i
+dtCO2_pH = typeof(dtCO2_i) == Float64 ? [dtCO2_i] : dtCO2_i
+dH_i = 10.0 .^ -(pyco2.solve.get.pHfromTATC(dalk_pH, dtCO2_pH, totals, ks))
+dH_i = length(dH_i) == 1 ? dH_i[1] : dH_i
+
 "Prepare Solute with a constant start value."
 function makeSolute(var_start::Float64, above::Float64, D_var::Array{Float64})
     var_start = fill(var_start, ndepths)
@@ -387,6 +413,7 @@ pMnO2 = makeSolid(pMnO2_i, FMnO2, D_bio)
 pcalcite = makeSolid(pcalcite_i, Fcalcite, D_bio)
 paragonite = makeSolid(paragonite_i, Faragonite, D_bio)
 pclay = makeSolid(pclay_i, Fclay, D_bio)
+dH = makeSolute(dH_i, 0.0, D_dalk_tort2)  # just for internal storage
 # Main Radi model loop
 for t in 1:ntps
     tsave = t in savepoints  # i.e. do we save after this step?
@@ -476,6 +503,7 @@ for t in 1:ntps
         advect!(pclay, z)
         diffuse!(pclay, z)
         # --- Then do the reactions! -------------------------------------------
+        # OM degradation
         (
             rate_dO2,
             rate_dtCO2,
@@ -509,6 +537,22 @@ for t in 1:ntps
             RN,
             RP,
         )
+        # # CO2 system equilibration
+        h = dH.then[z]
+        alk_noncarbonate = (
+            Equilibrate.alk_ammonia(h, dtNH4.then[z], KNH3) +
+            Equilibrate.alk_borate(h, TB, KB) +
+            Equilibrate.alk_phosphate(h, dtPO4.then[z], KP1, KP2, KP3) +
+            # Equilibrate.alk_silicate(h, TSi, KSi) + 
+            Equilibrate.alk_sulfate(h, dtSO4.then[z], KSO4) +
+            Equilibrate.alk_sulfide(h, dtH2S.then[z], KH2S) +
+            Equilibrate.alk_water(h, Kw)
+        )
+        gamma = dtCO2.then[z] / alk_noncarbonate
+        dH.now[z] = K1 * (gamma - 1.0) *
+            sqrt((K1 * (1.0 - gamma))^2 - 4.0 * K1 * K2 * (1.0 - 2.0 * gamma)) / 2.0
+        dCO3 = dtCO2.then[z] * K1 * K2 / (K1 * K2 + K1 * dH.now[z] + dH.now[z]^2)
+        # React!
         react!(dO2, z, rate_dO2)
         react!(dtCO2, z, rate_dtCO2)
         react!(dtNO3, z, rate_dtNO3)
@@ -577,6 +621,7 @@ for t in 1:ntps
         pcalcite.then[z] = pcalcite.now[z]
         paragonite.then[z] = paragonite.now[z]
         pclay.then[z] = pclay.now[z]
+        dH.then[z] = dH.now[z]
     end  # for z in 2:(ndepths-1)
 end  # for t, main Radi model loop
 # ===== End of main model loop =================================================
