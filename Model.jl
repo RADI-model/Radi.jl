@@ -1,10 +1,11 @@
 module Model
 
-using Base.SimdLoop, PyCall
+using Base.SimdLoop
 include("gsw_rho.jl")
 include("Params.jl")
 include("React.jl")
 include("Equilibrate.jl")
+include("CO2System.jl")
 
 "Define Solute type."
 struct Solute
@@ -232,29 +233,48 @@ TR = Params.TR(z_res, tort2[2], dbl)
 zr_Db_0 = 2.0z_res / D_bio[2]
 # ^^^ NOT YET IN THE PARAMETERS PART OF THE DOCUMENTATION ^^^^^^^^^^^^^^^^^^
 
-# Equilibrium constants and total concentrations from PyCO2SYS
-pyco2 = pyimport("PyCO2SYS")
-WhichKs = 16
-WhoseTB = 2
-totals = pyco2.salts.assemble(S, 0.0, 0.0, 0.0, 0.0, WhichKs, WhoseTB)
-ks = pyco2.equilibria.assemble([T], [P], totals, [1], [16], [1], [1], [1])
-TB = totals["TB"][1]
-TF = totals["TF"][1]
-K1 = ks["K1"][1]
-K2 = ks["K2"][1]
-KB = ks["KB"][1]
-# KSi = ks["KSi"][1]
-Kw = ks["KW"][1]
-KP1 = ks["KP1"][1]
-KP2 = ks["KP2"][1]
-KP3 = ks["KP3"][1]
-KNH3 = ks["KNH3"][1]
-KH2S = ks["KH2S"][1]
-KSO4 = ks["KSO4"][1]
-# Get initial pH
-dalk_pH = typeof(dalk_i) == Float64 ? [dalk_i] : dalk_i
-dtCO2_pH = typeof(dtCO2_i) == Float64 ? [dtCO2_i] : dtCO2_i
-dH_i = 10.0 .^ -(pyco2.solve.get.pHfromTATC(dalk_pH, dtCO2_pH, totals, ks))
+# # Equilibrium constants and total concentrations from PyCO2SYS
+# pyco2 = pyimport("PyCO2SYS")
+# WhichKs = 16
+# WhoseTB = 2
+# totals = pyco2.salts.assemble(S, 0.0, 0.0, 0.0, 0.0, WhichKs, WhoseTB)
+# ks = pyco2.equilibria.assemble([T], [P], totals, [1], [16], [1], [1], [1])
+# TB = totals["TB"][1]
+# TF = totals["TF"][1]
+# K1 = ks["K1"][1]
+# K2 = ks["K2"][1]
+# KB = ks["KB"][1]
+# # KSi = ks["KSi"][1]
+# Kw = ks["KW"][1]
+# KP1 = ks["KP1"][1]
+# KP2 = ks["KP2"][1]
+# KP3 = ks["KP3"][1]
+# KNH3 = ks["KNH3"][1]
+# KH2S = ks["KH2S"][1]
+# KSO4 = ks["KSO4"][1]
+# # Get initial pH
+# dalk_pH = typeof(dalk_i) == Float64 ? [dalk_i] : dalk_i
+# dtCO2_pH = typeof(dtCO2_i) == Float64 ? [dtCO2_i] : dtCO2_i
+# dH_i = 10.0 .^ -(pyco2.solve.get.pHfromTATC(dalk_pH, dtCO2_pH, totals, ks))
+# dH_i = length(dH_i) == 1 ? dH_i[1] : dH_i
+# Get it all from CO2System.jl instead, with pH all on Free scale
+co2s = CO2System.CO2SYS(1e6dalk_i / rho_sw, 1e6dtCO2_i / rho_sw, 1, 2, S, T, T, P, P,
+    0e6 / rho_sw, 1e6dtPO4_i / rho_sw, 3, 10, 1)[1]
+TB = co2s[1, 79][1] * 1e-6rho_sw
+K1 = co2s[1, 54][1] * rho_sw
+K2 = co2s[1, 55][1] * rho_sw
+KB = co2s[1, 59][1] * rho_sw
+Kw = co2s[1, 58][1] * rho_sw ^ 2
+KP1 = co2s[1, 62][1] * rho_sw
+KP2 = co2s[1, 63][1] * rho_sw
+KP3 = co2s[1, 64][1] * rho_sw
+KSi = co2s[1, 65][1] * rho_sw
+KSO4 = co2s[1, 61][1] * rho_sw
+# The following two still need proper pH scale conversions and pressure corrections:
+SWStoTOT = 1.0  # but we actually want to go to Free!
+KNH3 = Equilibrate.K_NH3_CW95(T + 273.15, S, SWStoTOT) * rho_sw
+KH2S = Equilibrate.K_H2S_M88(T + 273.15, S, SWStoTOT) * rho_sw
+dH_i = @. (10.0 ^ -co2s[:, 35]) * rho_sw
 dH_i = length(dH_i) == 1 ? dH_i[1] : dH_i
 
 "Prepare Solute with a constant start value."
@@ -594,6 +614,7 @@ for t in 1:ntps
             pcalcite.save[z-1, sp+1] = pcalcite.now[z]
             paragonite.save[z-1, sp+1] = paragonite.now[z]
             pclay.save[z-1, sp+1] = pclay.now[z]
+            dH.save[z-1, sp+1] = dH.now[z]
             if z == ndepths-1
                 println("Radi reached savepoint $sp of $nsps (step $t of $ntps)...")
                 sp += 1
@@ -652,6 +673,7 @@ return (
     pcalcite.save,
     paragonite.save,
     pclay.save,
+    dH.save,
 )
 end  # function model
 

@@ -32,6 +32,7 @@ function go(initial::Dict)
         pcalcite,
         paragonite,
         pclay,
+        dH,
     ) = Model.timeloop(
         stoptime,
         interval,
@@ -112,6 +113,7 @@ function go(initial::Dict)
         :pcalcite => pcalcite,
         :paragonite => paragonite,
         :pclay => pclay,
+        :dH => dH,
     )
 end  # function go
 

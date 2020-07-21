@@ -1,5 +1,29 @@
 module Equilibrate
 
+function K_NH3_CW95(TempK, Sal, SWStoTOT)
+    # Ammonia dissociation constant from Clegg and Whitfield (1995)
+    # via jonathansharp/CO2-System-Extd@master [2020-07-21]
+    pK_NH3 = @. (
+        9.244605 - 2729.33*(1.0/298.15 - 1.0/TempK + (0.04203362 - 11.24742/TempK)*Sal^0.25 +
+        (-13.6416 + 1.176949*TempK^0.5 - 0.02860785TempK + 545.4834/TempK)*Sal^0.5 +
+        (-0.1462507 + 0.0090226468*TempK^0.5 - 0.0001471361TempK + 10.5425/TempK)*Sal^1.5 +
+        (0.004669309 - 0.0001691742*TempK^0.5 - 0.5677934/TempK)*Sal^2 +
+        (-2.354039e-05 + 0.009698623/TempK)*Sal^2.5)
+    )
+    K_NH3 = @. 10.0 ^ -pK_NH3  # Total scale, mol/kg-H2O
+    K_NH3 = @. K_NH3 * (1.0 - 0.001005Sal)  # mol/kg-SW
+    K_NH3 = K_NH3 ./ SWStoTOT  # converts to SWS pH scale
+end  # function K_NH3_CW95
+
+function K_H2S_M88(TempK, Sal, SWStoTOT)
+    # First hydrogen sulfide dissociation constant from Millero et al. (1988)
+    # via jonathansharp/CO2-System-Extd@master [2020-07-21]
+    K_H2S = @. (
+        exp(225.838 - 13275.3/TempK - 34.6435*log(TempK) + 0.3449*Sal^0.5 - 0.0274*Sal)
+        / SWStoTOT
+    )
+end  # function K_H2S_M88
+
 function alk_borate(h::Float64, TB::Float64, KB::Float64)
     TB * KB / (KB + h)
 end  # function alk_borate
@@ -15,7 +39,7 @@ end  # function alk_water
 function alk_phosphate(h::Float64, TP::Float64, KP1::Float64, KP2::Float64, KP3::Float64)
     (
         TP
-        * (KP1 * KP2 * h^2 * KP1 * KP2 * KP3 - h^3)
+        * (KP1 * KP2 * h + 2.0 * KP1 * KP2 * KP3 - h^3)
         / (
             h^3
             + KP1 * h^2
