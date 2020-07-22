@@ -558,7 +558,7 @@ for t in 1:ntps
             RN,
             RP,
         )
-        # # CO2 system equilibration
+        # CO2 system equilibration
         h = dH.then[z]
         # Common to both methods:
         alk_borate = Equilibrate.alk_borate(h, TB, KB)
