@@ -106,6 +106,7 @@ function timeloop(
     dMnII_w::Float64,
     dalk_w::Float64,
     dCa_w::Float64,
+    dSi_w::Float64,
     Fpom::Float64,
     Fpom_r::Float64,
     Fpom_s::Float64,
@@ -259,7 +260,7 @@ zr_Db_0 = 2.0z_res / D_bio[2]
 # dH_i = length(dH_i) == 1 ? dH_i[1] : dH_i
 # Get it all from CO2System.jl instead, with pH all on Free scale
 co2s = CO2System.CO2SYS(1e6dalk_i / rho_sw, 1e6dtCO2_i / rho_sw, 1, 2, S, T, T, P, P,
-    0e6 / rho_sw, 1e6dtPO4_i / rho_sw, 3, 10, 1)[1]
+    1e6dSi_w / rho_sw, 1e6dtPO4_i / rho_sw, 3, 10, 1)[1]
 TB = co2s[1, 79][1] * 1e-6rho_sw
 K1 = co2s[1, 54][1] * rho_sw
 K2 = co2s[1, 55][1] * rho_sw
@@ -565,7 +566,7 @@ for t in 1:ntps
             Equilibrate.alk_ammonia(h, dtNH4.then[z], KNH3) +
             alk_borate +
             Equilibrate.alk_phosphate(h, dtPO4.then[z], KP1, KP2, KP3) +
-            # Equilibrate.alk_silicate(h, TSi, KSi) + 
+            Equilibrate.alk_silicate(h, dSi_w, KSi) + 
             Equilibrate.alk_sulfate(h, dtSO4.then[z], KSO4) +
             Equilibrate.alk_sulfide(h, dtH2S.then[z], KH2S) +
             Equilibrate.alk_water(h, Kw)

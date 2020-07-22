@@ -62,6 +62,7 @@ function go(initial::Dict)
         dMnII_w,
         dalk_w,
         dCa_w,
+        dSi_w,
         Fpom,
         Fpom_r,
         Fpom_s,
