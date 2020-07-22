@@ -1,9 +1,32 @@
 module CO2System
 
+# This has been extended for Radi.jl to include ammonia and sulfide internally.
+# This is a bare minimal addition for Radi.jl - it ONLY includes these terms in
+# the CalculatepHfromTATC solver.
+# Also adds Sulpis et al. (2020) K1/K2 constants as option 16.
+
 export CO2SYS
 
-function CO2SYS(PAR1,PAR2,PAR1TYPE,PAR2TYPE,SAL,TEMPIN,TEMPOUT,PRESIN,PRESOUT,
-    SI,PO4,pHSCALEIN,K1K2CONSTANTS,KSO4CONSTANTS)
+# function CO2SYS(PAR1,PAR2,PAR1TYPE,PAR2TYPE,SAL,TEMPIN,TEMPOUT,PRESIN,PRESOUT,
+#     SI,PO4,pHSCALEIN,K1K2CONSTANTS,KSO4CONSTANTS)
+function CO2SYS(
+    PAR1,
+    PAR2,
+    PAR1TYPE,
+    PAR2TYPE,
+    SAL,
+    TEMPIN,
+    TEMPOUT,
+    PRESIN,
+    PRESOUT,
+    SI,
+    PO4,
+    NH4,
+    H2S,
+    pHSCALEIN,
+    K1K2CONSTANTS,
+    KSO4CONSTANTS
+)
 #**************************************************************************
 #
 # First   CO2SYS.m version: 1.1 (Sep 2011)
@@ -279,8 +302,8 @@ global pHScale, WhichKs, WhoseKSO4, Pbar
 global Sal, sqrSal, TempK, logTempK, TempCi, TempCo, Pdbari, Pdbaro
 global FugFac, VPFac, PengCorrection, ntps, RGasConstant
 global fH, RT
-global K0, K1, K2, KW, KB, KF, KS, KP1, KP2, KP3, KSi
-global TB, TF, TS, TP, TSi, F
+global K0, K1, K2, KW, KB, KF, KS, KP1, KP2, KP3, KSi, KNH4, KH2S
+global TB, TF, TS, TP, TSi, TNH4, TH2S, F
 
 # # Added by JM Epitalon
 # # For computing derivative with respect to Ks, one has to call CO2sys with a perturbed K
@@ -309,13 +332,15 @@ PRESIN        = scalar2array(PRESIN)
 PRESOUT       = scalar2array(PRESOUT)
 SI            = scalar2array(SI)
 PO4           = scalar2array(PO4)
+NH4           = scalar2array(NH4)
+H2S           = scalar2array(H2S)
 pHSCALEIN     = scalar2array(pHSCALEIN)
 K1K2CONSTANTS = scalar2array(K1K2CONSTANTS)
 KSO4CONSTANTS = scalar2array(KSO4CONSTANTS)
 
 # Get list of all vectors [Julia only]
 allvecs = [PAR1, PAR2, PAR1TYPE, PAR2TYPE, SAL, TEMPIN, TEMPOUT,
-    PRESIN, PRESOUT, SI, PO4, pHSCALEIN, K1K2CONSTANTS, KSO4CONSTANTS]
+    PRESIN, PRESOUT, SI, PO4, NH4, H2S, pHSCALEIN, K1K2CONSTANTS, KSO4CONSTANTS]
 
 # Determine lengths of input vectors
 veclengths = [max(size(vec)...) for vec in allvecs]
@@ -339,6 +364,8 @@ PRESIN        = Float64.(PRESIN[:])
 PRESOUT       = Float64.(PRESOUT[:])
 SI            = Float64.(SI[:])
 PO4           = Float64.(PO4[:])
+NH4           = Float64.(NH4[:])
+H2S           = Float64.(H2S[:])
 pHSCALEIN     = pHSCALEIN[:]
 K1K2CONSTANTS = K1K2CONSTANTS[:]
 KSO4CONSTANTS = KSO4CONSTANTS[:]
@@ -365,6 +392,8 @@ PRESIN        = popvecs(PRESIN,ntps)
 PRESOUT       = popvecs(PRESOUT,ntps)
 SI            = popvecs(SI,ntps)
 PO4           = popvecs(PO4,ntps)
+NH4           = popvecs(NH4, ntps)
+H2S           = popvecs(H2S, ntps)
 pHSCALEIN     = popvecs(pHSCALEIN,ntps)
 K1K2CONSTANTS = popvecs(K1K2CONSTANTS,ntps)
 KSO4CONSTANTS = popvecs(KSO4CONSTANTS,ntps)
@@ -383,6 +412,8 @@ Sal          = SAL
 sqrSal       = sqrt.(SAL)
 TP           = PO4
 TSi          = SI
+TNH4         = NH4
+TH2S         = H2S
 RGasConstant = 83.1451  # ml bar-1 K-1 mol-1, DOEv2
 #RGasConstant = 83.14472 # ml bar-1 K-1 mol-1, DOEv3
 
@@ -413,10 +444,14 @@ Sal[F] .= 0.0
 F = @. (WhichKs == 8) | (WhichKs == 6)
 TP[F]  .= 0.0
 TSi[F] .= 0.0
+TNH4[F] .= 0.0
+TH2S[F] .= 0.0
 # All other cases
 F = .!F
 TP[F] /= 1e6
 TSi[F] /= 1e6
+TNH4[F] /= 1e6
+TH2S[F] /= 1e6
 
 # The vector 'PengCorrection' is used to modify the value of TA, for those
 # cases where WhichKs==7, since PAlk(Peng) = PAlk(Dickson) + TP.
@@ -518,7 +553,7 @@ xCO2dryinp              = PCic ./ VPFac # ' this assumes pTot = 1 atm
 pHicT, pHicS, pHicF, pHicN = FindpHOnAllScales(PHic)
 
 # Merge the Ks at input into an array. Ks at output will be glued to this later.
-KIVEC = hcat(K0, K1, K2, -log10.(K1), -log10.(K2), KW, KB, KF, KS, KP1, KP2, KP3, KSi)
+KIVEC = hcat(K0, K1, K2, -log10.(K1), -log10.(K2), KW, KB, KF, KS, KP1, KP2, KP3, KSi, KNH4, KH2S)
 
 # Calculate the constants for all samples at output conditions
 Constants(TempCo,Pdbaro)
@@ -563,7 +598,7 @@ xCO2dryout              = PCoc ./ VPFac # ' this assumes pTot = 1 atm
 # Just for reference, convert pH at output conditions to the other scales, too.
 pHocT, pHocS, pHocF, pHocN = FindpHOnAllScales(PHoc)
 
-KOVEC = hcat(K0, K1, K2, -log10.(K1), -log10.(K2), KW, KB, KF, KS, KP1, KP2, KP3, KSi)
+KOVEC = hcat(K0, K1, K2, -log10.(K1), -log10.(K2), KW, KB, KF, KS, KP1, KP2, KP3, KSi, KNH4, KH2S)
 TVEC = hcat(TB, TF, TS)
 
 # Saving data in array, 81 columns, as many rows as samples input
@@ -590,9 +625,9 @@ HEADERS = ["TAlk","TCO2","pHin","pCO2in","fCO2in","HCO3in","CO3in",
     "PRESIN","PRESOUT","PAR1TYPE","PAR2TYPE","K1K2CONSTANTS","KSO4CONSTANTS",
     "pHSCALEIN","SAL","PO4","SI","K0input","K1input","K2input","pK1input",
     "pK2input","KWinput","KBinput","KFinput","KSinput","KP1input","KP2input",
-    "KP3input","KSiinput","K0output","K1output","K2output","pK1output",
+    "KP3input","KSiinput","KNH4input","KH2Sinput","K0output","K1output","K2output","pK1output",
     "pK2output","KWoutput","KBoutput","KFoutput","KSoutput","KP1output",
-    "KP2output","KP3output","KSioutput","TB","TF","TS"]
+    "KP2output","KP3output","KSioutput","KNH4output","KH2Soutput","TB","TF","TS"]
 
     NICEHEADERS = [
         "01 - TAlk             (umol/kgSW) ",
@@ -660,22 +695,26 @@ HEADERS = ["TAlk","TCO2","pHin","pCO2in","fCO2in","HCO3in","CO3in",
         "63 - KP2input         ()          ",
         "64 - KP3input         ()          ",
         "65 - KSiinput         ()          ",
-        "66 - K0output         ()          ",
-        "67 - K1output         ()          ",
-        "68 - K2output         ()          ",
-        "69 - pK1output        ()          ",
-        "70 - pK2output        ()          ",
-        "71 - KWoutput         ()          ",
-        "72 - KBoutput         ()          ",
-        "73 - KFoutput         ()          ",
-        "74 - KSoutput         ()          ",
-        "75 - KP1output        ()          ",
-        "76 - KP2output        ()          ",
-        "77 - KP3output        ()          ",
-        "78 - KSioutput        ()          ",
-        "79 - TB               (umol/kgSW) ",
-        "80 - TF               (umol/kgSW) ",
-        "81 - TS               (umol/kgSW) "]
+        "66 - KNH4input        ()          ",
+        "67 - KH2Sinput        ()          ",
+        "68 - K0output         ()          ",
+        "69 - K1output         ()          ",
+        "70 - K2output         ()          ",
+        "71 - pK1output        ()          ",
+        "72 - pK2output        ()          ",
+        "73 - KWoutput         ()          ",
+        "74 - KBoutput         ()          ",
+        "75 - KFoutput         ()          ",
+        "76 - KSoutput         ()          ",
+        "77 - KP1output        ()          ",
+        "78 - KP2output        ()          ",
+        "79 - KP3output        ()          ",
+        "80 - KSioutput        ()          ",
+        "81 - KNH4output       ()          ",
+        "82 - KH2Soutput       ()          ",
+        "83 - TB               (umol/kgSW) ",
+        "84 - TF               (umol/kgSW) ",
+        "85 - TS               (umol/kgSW) "]
 
 return DATA, HEADERS, NICEHEADERS
 
@@ -694,7 +733,7 @@ end # end main function
 function Constants(TempC,Pdbar)
 global pHScale, WhichKs, WhoseKSO4, sqrSal, Pbar, RT
 global K0, fH, FugFac, VPFac, ntps, TempK, logTempK
-global K1, K2, KW, KB, KF, KS, KP1, KP2, KP3, KSi
+global K1, K2, KW, KB, KF, KS, KP1, KP2, KP3, KSi, KNH4, KH2S
 global TB, TF, TS, TP, TSi, RGasConstant, Sal
 
 # SUB Constants, version 04.01, 10-13-97, written by Ernie Lewis.
@@ -964,6 +1003,45 @@ if any(F)
         (1 - 0.001005Sal[F])    # convert to mol/kg-SW
 end
 
+
+	
+# Calculate KNH4 and KH2S: added by J. Sharp
+KNH4           = fill(NaN,ntps); KH2S       = fill(NaN,ntps);
+PKNH4          = fill(NaN,ntps); lnKH2S     = fill(NaN,ntps);
+F = @. (WhichKs==6) | (WhichKs==7) | (WhichKs==8); # GEOSECS or freshwater cases
+if any(F)
+    KNH4[F] = 0;
+    KH2S[F] = 0;
+end
+F = @. (WhichKs!=6) & (WhichKs!=7) & (WhichKs!=8); # All other cases
+if any(F)
+# Ammonia dissociation constant from Yao and Millero (1995)
+#   KNH4(F) = (exp(-6285.33./TempK[F]+0.0001635.*TempK[F]-0.25444+...
+#             (0.46532-123.7184./TempK[F]).*Sal[F].^0.5+(-0.01992+...
+#             3.17556./TempK[F]).*Sal[F]))...
+#             ./SWStoTOT[F];                    % convert to SWS pH scale
+# Ammonia dissociation constant from Clegg and Whitfield (1995)
+  PKNH4[F] = @. 9.244605-2729.33*(1/298.15 - 1/TempK[F]) +
+          (0.04203362-11.24742/TempK[F])*Sal[F]^0.25 +  # added missing (F) index on Sal // MPH
+          (-13.6416+1.176949*TempK[F]^0.5 -
+          0.02860785*TempK[F]+545.4834/TempK[F])*Sal[F]^0.5+
+          (-0.1462507+0.0090226468*TempK[F]^0.5-
+          0.0001471361*TempK[F]+10.5425/TempK[F])*Sal[F]^1.5+
+          (0.004669309-0.0001691742*TempK[F]^0.5-
+          0.5677934/TempK[F])*Sal[F]^2+
+          (-2.354039E-05+0.009698623/TempK[F])*Sal[F]^2.5;
+  KNH4[F]  = @. 10.0 ^ -PKNH4[F];                    # total scale, mol/kg-H2O
+  KNH4[F]  = @. KNH4[F]*(1-0.001005*Sal[F]); # mol/kg-SW
+  KNH4[F]  = KNH4[F] ./ SWStoTOT[F];             # converts to SWS pH scale
+
+# First hydrogen sulfide dissociation constant from Millero et al. (1988)
+  KH2S[F]  = @. (exp(225.838-13275.3/TempK[F]-34.6435*log(TempK[F]) +
+              0.3449*Sal[F]^0.5-0.0274*Sal[F])) /
+              SWStoTOT[F];                    # convert to SWS pH scale
+
+end
+
+
 # CalculateK1K2:
 logK1 = fill(NaN,ntps); lnK1 = fill(NaN,ntps)
 pK1   = fill(NaN,ntps); K1   = fill(NaN,ntps)
@@ -1228,6 +1306,20 @@ if any(F)
 	pK2 = @. pK20 + A2 + B2/TempK[F] + C2*log(TempK[F])
 	K2[F] = 10.0 .^ -pK2
 end
+F=(WhichKs==16);
+# Added by J. D. Sharp on 9 Jul 2020
+if any(F)
+    # From Sulpis et al, 2020
+    # Ocean Science Discussions, in review
+    # This study uses overdeterminations of the carbonate system to
+    # iteratively fit K1 and K2
+    pK1[F] = @. 8510.63./TempK[F]-172.4493+26.32996.*log(TempK[F])-0.011555.*Sal[F]+0.0001152.*Sal[F].^2;
+    K1[F]  = @. 10.0 .^-pK1[F] /           # this is on the total pH scale in mol/kg-SW
+        SWStoTOT[F];                # convert to SWS pH scale
+    pK2[F] = @. 4226.23./TempK[F]-59.4636+9.60817.*log(TempK[F])-0.01781 .*Sal[F]+0.0001122.*Sal[F].^2;
+    K2[F]  = @. 10.0 .^-pK2[F] /           # this is on the total pH scale in mol/kg-SW
+        SWStoTOT[F];                # convert to SWS pH scale
+end
 
 #***************************************************************************
 #CorrectKsForPressureNow:
@@ -1443,6 +1535,15 @@ deltaV = @. -29.48 + 0.1622TempC - 0.002608TempC^2
 Kappa  .= -2.84 / 1000
 lnKSifac = @. (-deltaV +  0.5Kappa*Pbar) *Pbar / RT
 
+# PressureEffectsOnKNH4: added by J. Sharp
+deltaV = @. -26.43 + 0.0889.*TempC - 0.000905.*TempC.^2;
+Kappa  = @. (-5.03 + 0.0814.*TempC)./1000;
+lnKNH4fac = @. (-deltaV + 0.5.*Kappa.*Pbar).*Pbar./RT;
+# PressureEffectsOnKH2S: added by J. Sharp
+deltaV = @. -11.07 - 0.009.*TempC - 0.000942.*TempC.^2;
+Kappa  = @. (-2.89 + 0.054 .*TempC)./1000;
+lnKH2Sfac = @. (-deltaV + 0.5.*Kappa.*Pbar).*Pbar./RT;
+
 # CorrectKsForPressureHere:
 K1fac  = exp.(lnK1fac);  K1  = K1 .*K1fac
 K2fac  = exp.(lnK2fac);  K2  = K2 .*K2fac
@@ -1454,6 +1555,8 @@ KP1fac = exp.(lnKP1fac); KP1 = KP1.*KP1fac
 KP2fac = exp.(lnKP2fac); KP2 = KP2.*KP2fac
 KP3fac = exp.(lnKP3fac); KP3 = KP3.*KP3fac
 KSifac = exp.(lnKSifac); KSi = KSi.*KSifac
+KNH4fac = exp.(lnKNH4fac); KNH4 = KNH4.*KNH4fac; # added by J. Sharp
+KH2Sfac = exp.(lnKH2Sfac); KH2S = KH2S.*KH2Sfac; # added by J. Sharp
 
 # CorrectpHScaleConversionsForPressure:
 # fH has been assumed to be independent of pressure.
@@ -1480,6 +1583,7 @@ K1  = K1.* pHfactor; K2  = K2.* pHfactor;
 KW  = KW.* pHfactor; KB  = KB.* pHfactor;
 KP1 = KP1.*pHfactor; KP2 = KP2.*pHfactor;
 KP3 = KP3.*pHfactor; KSi = KSi.*pHfactor;
+KNH4 = KNH4.*pHfactor; KH2S = KH2S.*pHfactor;
 
 # CalculateFugacityConstants:
 # This assumes that the pressure is at one atmosphere, or close to it.
@@ -1535,8 +1639,8 @@ end # end nested function
 function CalculatepHfromTATC(TAx, TCx)
 global pHScale, WhichKs, WhoseKSO4, sqrSal, Pbar, RT
 global K0, fH, FugFac, VPFac, ntps, TempK, logTempK
-global K1, K2, KW, KB, KF, KS, KP1, KP2, KP3, KSi
-global TB, TF, TS, TP, TSi, F
+global K1, K2, KW, KB, KF, KS, KP1, KP2, KP3, KSi, KNH4, KH2S
+global TB, TF, TS, TP, TSi, TNH4, TH2S, F
 #Outputs pH
 # SUB CalculatepHfromTATC, version 04.01, 10-13-96, written by Ernie Lewis.
 # Inputs: TA, TC, K(), T()
@@ -1554,6 +1658,10 @@ K1F=K1[F];   K2F=K2[F];   KWF =KW[F];
 KP1F=KP1[F]; KP2F=KP2[F]; KP3F=KP3[F];  TPF=TP[F];
 TSiF=TSi[F]; KSiF=KSi[F]; TBF =TB[F];   KBF=KB[F];
 TSF =TS[F];  KSF =KS[F];  TFF =TF[F];   KFF=KF[F];
+TH2SF = TH2S[F]
+KH2SF = KH2S[F]
+TNH4F = TNH4[F]
+KNH4F = KNH4[F]
 vl          = sum(F)  # VectorLength
 pHGuess     = 8.0       # this is the first guess
 pHTol       = 0.0001  # tolerance for iterations end
@@ -1570,11 +1678,13 @@ while any(@. abs(deltapH) > pHTol)
     PhosBot   = @. H^3 + KP1F*H^2 + KP1F*KP2F*H + KP1F*KP2F*KP3F
     PAlk      = @. TPF * PhosTop/PhosBot
     SiAlk     = @. TSiF*KSiF / (KSiF + H)
+    AmmAlk    = @. TNH4F * KNH4F / (KNH4F + H)
+    HSAlk     = @. TH2SF * KH2SF / (KH2SF + H)
     FREEtoTOT = @. 1 + TSF/KSF # pH scale conversion factor
     Hfree     = H ./ FREEtoTOT # for H on the total scale
     HSO4      = @. TSF / (1 + KSF/Hfree) # since KS is on the free scale
     HF        = @. TFF / (1 + KFF/Hfree) # since KF is on the free scale
-    Residual  = @. TAx - CAlk - BAlk - OH - PAlk - SiAlk + Hfree + HSO4 + HF
+    Residual  = @. TAx - CAlk - BAlk - OH - PAlk - SiAlk - AmmAlk - HSAlk + Hfree + HSO4 + HF
     # find Slope dTA/dpH;
     # (this is not exact, but keeps all important terms);
     Slope     = @. ln10 * (TCx*K1F*H*(H^2 + K1F*K2F + 4H*K2F)/Denom/Denom + BAlk*H / (KBF + H) + OH + H)

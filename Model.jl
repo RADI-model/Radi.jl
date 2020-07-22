@@ -259,9 +259,26 @@ zr_Db_0 = 2.0z_res / D_bio[2]
 # dH_i = 10.0 .^ -(pyco2.solve.get.pHfromTATC(dalk_pH, dtCO2_pH, totals, ks))
 # dH_i = length(dH_i) == 1 ? dH_i[1] : dH_i
 # Get it all from CO2System.jl instead, with pH all on Free scale
-co2s = CO2System.CO2SYS(1e6dalk_i / rho_sw, 1e6dtCO2_i / rho_sw, 1, 2, S, T, T, P, P,
-    1e6dSi_w / rho_sw, 1e6dtPO4_i / rho_sw, 3, 10, 1)[1]
-TB = co2s[1, 79][1] * 1e-6rho_sw
+co2s = CO2System.CO2SYS(
+    1e6dalk_i / rho_sw,
+    1e6dtCO2_i / rho_sw,
+    1,
+    2,
+    S,
+    T,
+    T,
+    P,
+    P,
+    1e6dSi_w / rho_sw,
+    1e6dtPO4_i / rho_sw,
+    1e6dtNH4_i / rho_sw,
+    1e6dtH2S_i / rho_sw,
+    3,
+    10,
+    1,
+)[1]
+TB = co2s[1, 83][1] * 1e-6rho_sw
+TF = co2s[1, 84][1] * 1e-6rho_sw
 K1 = co2s[1, 54][1] * rho_sw
 K2 = co2s[1, 55][1] * rho_sw
 KB = co2s[1, 59][1] * rho_sw
@@ -271,10 +288,13 @@ KP2 = co2s[1, 63][1] * rho_sw
 KP3 = co2s[1, 64][1] * rho_sw
 KSi = co2s[1, 65][1] * rho_sw
 KSO4 = co2s[1, 61][1] * rho_sw
-# The following two still need proper pH scale conversions and pressure corrections:
-SWStoTOT = 1.0  # but we actually want to go to Free!
-KNH3 = Equilibrate.K_NH3_CW95(T + 273.15, S, SWStoTOT) * rho_sw
-KH2S = Equilibrate.K_H2S_M88(T + 273.15, S, SWStoTOT) * rho_sw
+KNH3 = co2s[1, 66][1] * rho_sw
+KH2S = co2s[1, 67][1] * rho_sw
+KF = co2s[1, 60][1] * rho_sw
+# # The following two still need proper pH scale conversions and pressure corrections:
+# SWStoTOT = 1.0  # but we actually want to go to Free!
+# KNH3 = Equilibrate.K_NH3_CW95(T + 273.15, S, SWStoTOT) * rho_sw
+# KH2S = Equilibrate.K_H2S_M88(T + 273.15, S, SWStoTOT) * rho_sw
 dH_i = @. (10.0 ^ -co2s[:, 35]) * rho_sw
 dH_i = length(dH_i) == 1 ? dH_i[1] : dH_i
 
@@ -565,6 +585,7 @@ for t in 1:ntps
         alk_noncarbonate = (
             Equilibrate.alk_ammonia(h, dtNH4.then[z], KNH3) +
             alk_borate +
+            Equilibrate.alk_fluoride(h, TF, KF) +
             Equilibrate.alk_phosphate(h, dtPO4.then[z], KP1, KP2, KP3) +
             Equilibrate.alk_silicate(h, dSi_w, KSi) + 
             Equilibrate.alk_sulfate(h, dtSO4.then[z], KSO4) +
