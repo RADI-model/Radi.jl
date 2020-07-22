@@ -1,5 +1,7 @@
 module Equilibrate
 
+const ln10 = log(10.0)
+
 function K_NH3_CW95(TempK, Sal, SWStoTOT)
     # Ammonia dissociation constant from Clegg and Whitfield (1995)
     # via jonathansharp/CO2-System-Extd@master [2020-07-21]
@@ -60,5 +62,39 @@ end  # function alk_sulfide
 function alk_sulfate(h::Float64, TSO4::Float64, KSO4::Float64)
     -TSO4 / (1.0 + KSO4 / h)
 end  # function alk_sulfate
+
+function alk_fluoride(h::Float64, TF::Float64, KF::Float64)
+    -TF / (1.0 + KF / h)
+end  # function alk_fluoride
+
+function alk_carbonate(h::Float64, TC::Float64, K1::Float64, K2::Float64)
+    TC*K1 * (h + 2.0K2) / (h^2 + K1*h + K1*K2)
+end  # function alk_carbonate
+
+function dalk_dpH(
+    h::Float64,
+    TC::Float64,
+    borate_alk::Float64,
+    water_alk::Float64,
+    K1::Float64,
+    K2::Float64,
+    KB::Float64,
+)
+    ln10 * (TC * K1*h * (h^2 + K1*K2 + 4h*K2) / (h^2 + K1*h + K1*K2)^2 +
+        borate_alk*h / (KB + h) + water_alk + 2.0h)
+end  # function dalk_dpH
+
+function dalk_dh(
+    h::Float64,
+    TC::Float64,
+    borate_alk::Float64,
+    K1::Float64,
+    K2::Float64,
+    KB::Float64,
+    Kw::Float64,
+)
+    -(TC * K1 * (h^2 + K1*K2 + 4h*K2) / (h^2 + K1*h + K1*K2)^2 +
+        borate_alk / (KB + h) + Kw / h^2 + 1.0)
+end  # function dalk_dh
 
 end  # module Equilibrate

@@ -3,6 +3,7 @@ module Radi
 using MAT
 include("gsw_rho.jl")
 include("Model.jl")
+include("CO2System.jl")
 
 # Import site-specific settings
 include("IC_W29.jl")
@@ -184,6 +185,30 @@ initial = Dict(
 )
 results = go(initial)
 save(results)
+
+
+function check_pH(results)
+    co2s = CO2System.CO2SYS(
+        1e6results[:dalk][:, end] / rho_sw,
+        1e6results[:dtCO2][:, end] / rho_sw,
+        1,
+        2,
+        S,
+        T,
+        T,
+        P,
+        P,
+        0e6 / rho_sw,
+        1e6results[:dtPO4][:, end] / rho_sw,
+        3,
+        10,
+        1,
+    )[1]
+    pH_Radi_final = @. -log10(results[:dH][:, end] / rho_sw)
+    pH_CO2SYS_final = co2s[:, 35]
+    pH_diff = pH_Radi_final .- pH_CO2SYS_final
+    return (radi=pH_Radi_final, CO2SYS=pH_CO2SYS_final, diff=pH_diff)
+end  # check_pH
 
 
 end  # module Radi

@@ -25,9 +25,9 @@ const lambda_s = 1.0  # for slow-degrading POC / m
 const lambda_i = 0.05  # for irrigation / m
 
 # Define overlying water column properties
-T = 1.4  # temperature / degC
-S = 34.69  # practical salinity
-P = 1.0  # pressure / dbar
+const T = 1.4  # temperature / degC
+const S = 34.69  # practical salinity
+const P = 4380.0  # pressure at seafloor / dbar
 rho_sw = gsw_rho(S, T, P) # seawater density / kg/m^3
 # Concentrations all in mol/m^3
 dO2_w = 159.7e-6rho_sw  # dissolved oxygen

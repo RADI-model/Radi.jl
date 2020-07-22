@@ -559,18 +559,30 @@ for t in 1:ntps
         )
         # # CO2 system equilibration
         h = dH.then[z]
+        # Common to both methods:
+        alk_borate = Equilibrate.alk_borate(h, TB, KB)
         alk_noncarbonate = (
             Equilibrate.alk_ammonia(h, dtNH4.then[z], KNH3) +
-            Equilibrate.alk_borate(h, TB, KB) +
+            alk_borate +
             Equilibrate.alk_phosphate(h, dtPO4.then[z], KP1, KP2, KP3) +
             # Equilibrate.alk_silicate(h, TSi, KSi) + 
             Equilibrate.alk_sulfate(h, dtSO4.then[z], KSO4) +
             Equilibrate.alk_sulfide(h, dtH2S.then[z], KH2S) +
             Equilibrate.alk_water(h, Kw)
         )
-        gamma = dtCO2.then[z] / alk_noncarbonate
-        dH.now[z] = K1 * (gamma - 1.0) *
-            sqrt((K1 * (1.0 - gamma))^2 - 4.0 * K1 * K2 * (1.0 - 2.0 * gamma)) / 2.0
+        # # ==v==v== calc_pCO2 method ==v==v==v==v==v==
+        # gamma = dtCO2.then[z] / (dalk.then[z] - alk_noncarbonate)
+        # dH.now[z] = (K1 * (gamma - 1.0) +
+        #     sqrt((K1 * (1.0 - gamma))^2 - 4.0 * K1 * K2 * (1.0 - 2.0 * gamma))) / 2.0
+        # # ==^==^==^==^==^==^==^==^==^==^==^==^==^==^===
+        # ==v==v== Newton-Raphson method ==v==v==v==v==
+        alk_carbonate = Equilibrate.alk_carbonate(h, dtCO2.then[z], K1, K2)
+        alk_residual = dalk.then[z] - (alk_carbonate + alk_noncarbonate)
+        dalk_dh = Equilibrate.dalk_dh(h, dtCO2.then[z], alk_borate, K1, K2, KB, Kw)
+        h_delta = alk_residual / dalk_dh
+        dH.now[z] = h + h_delta
+        # ==^==^==^==^==^==^==^==^==^==^==^==^==^==^===
+        # End with carbonate ion concentration
         dCO3 = dtCO2.then[z] * K1 * K2 / (K1 * K2 + K1 * dH.now[z] + dH.now[z]^2)
         # React!
         react!(dO2, z, rate_dO2)
