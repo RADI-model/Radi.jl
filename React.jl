@@ -129,7 +129,7 @@ function dissolve(
     dCa::Float64,
     dCO3::Float64,
 )
-
+end  # function dissolve
 
 "All reaction rates."
 function getreactions(
