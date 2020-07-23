@@ -291,6 +291,8 @@ KNH3 = co2s[1, 66][1] * rho_sw
 KH2S = co2s[1, 67][1] * rho_sw
 TB = co2s[1, 83][1] * 1e-6rho_sw
 TF = co2s[1, 84][1] * 1e-6rho_sw
+KCa = co2s[1, 86][1] * rho_sw ^ 2
+KAr = co2s[1, 87][1] * rho_sw ^ 2
 dH_i = @. (10.0 ^ -co2s[:, 35]) * rho_sw
 dH_i = length(dH_i) == 1 ? dH_i[1] : dH_i
 

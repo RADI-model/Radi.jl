@@ -546,7 +546,7 @@ CO2inp                  = @. TCc - CO3inp - HCO3inp
 F = fill(true,ntps)           # i.e., do for all samples:
 Revelleinp              = RevelleFactor(TAc .- PengCorrection, TCc)
 
-OmegaCainp, OmegaArinp = CaSolubility(Sal, TempCi, Pdbari, TCc, PHic)
+OmegaCainp, OmegaArinp, KCa_input, KAr_input = CaSolubility(Sal, TempCi, Pdbari, TCc, PHic)
 xCO2dryinp              = PCic ./ VPFac # ' this assumes pTot = 1 atm
 
 # Just for reference, convert pH at input conditions to the other scales, too.
@@ -592,7 +592,7 @@ HCO3out, CO3out, BAlkout,
 PAlkout                += PengCorrection
 CO2out                  = @. TCc - CO3out - HCO3out
 Revelleout              = RevelleFactor(TAc, TCc)
-OmegaCaout, OmegaArout = CaSolubility(Sal, TempCo, Pdbaro, TCc, PHoc)
+OmegaCaout, OmegaArout, KCa_output, KAr_output = CaSolubility(Sal, TempCo, Pdbaro, TCc, PHoc)
 xCO2dryout              = PCoc ./ VPFac # ' this assumes pTot = 1 atm
 
 # Just for reference, convert pH at output conditions to the other scales, too.
@@ -603,17 +603,19 @@ TVEC = hcat(TB, TF, TS)
 
 # Saving data in array, 81 columns, as many rows as samples input
 DATA= hcat(
-      TAc*1e6      ,  TCc*1e6        , PHic          , PCic*1e6       , FCic*1e6   ,
-      HCO3inp*1e6  ,  CO3inp*1e6     , CO2inp*1e6    , BAlkinp*1e6    , OHinp*1e6  ,
-      PAlkinp*1e6  ,  SiAlkinp*1e6   , Hfreeinp*1e6  , Revelleinp     , OmegaCainp , ### Multiplied Hfreeinp *1e6, svh20100827
-      OmegaArinp   ,  xCO2dryinp*1e6 , PHoc          , PCoc*1e6       , FCoc*1e6   ,
-      HCO3out*1e6  ,  CO3out*1e6     , CO2out*1e6    , BAlkout*1e6    , OHout*1e6  ,
-      PAlkout*1e6  ,  SiAlkout*1e6   , Hfreeout*1e6  , Revelleout     , OmegaCaout , ### Multiplied Hfreeout *1e6, svh20100827
-      OmegaArout   ,  xCO2dryout*1e6 , pHicT         , pHicS          , pHicF      ,
-      pHicN        ,  pHocT          , pHocS         , pHocF          , pHocN      ,
-      TEMPIN       ,  TEMPOUT        , PRESIN        , PRESOUT        , PAR1TYPE   ,
-      PAR2TYPE     ,  K1K2CONSTANTS  , KSO4CONSTANTS , pHSCALEIN      , SAL        ,
-      PO4          ,  SI             , KIVEC         , KOVEC          , TVEC*1e6   )
+    TAc*1e6      ,  TCc*1e6        , PHic          , PCic*1e6       , FCic*1e6   ,
+    HCO3inp*1e6  ,  CO3inp*1e6     , CO2inp*1e6    , BAlkinp*1e6    , OHinp*1e6  ,
+    PAlkinp*1e6  ,  SiAlkinp*1e6   , Hfreeinp*1e6  , Revelleinp     , OmegaCainp , ### Multiplied Hfreeinp *1e6, svh20100827
+    OmegaArinp   ,  xCO2dryinp*1e6 , PHoc          , PCoc*1e6       , FCoc*1e6   ,
+    HCO3out*1e6  ,  CO3out*1e6     , CO2out*1e6    , BAlkout*1e6    , OHout*1e6  ,
+    PAlkout*1e6  ,  SiAlkout*1e6   , Hfreeout*1e6  , Revelleout     , OmegaCaout , ### Multiplied Hfreeout *1e6, svh20100827
+    OmegaArout   ,  xCO2dryout*1e6 , pHicT         , pHicS          , pHicF      ,
+    pHicN        ,  pHocT          , pHocS         , pHocF          , pHocN      ,
+    TEMPIN       ,  TEMPOUT        , PRESIN        , PRESOUT        , PAR1TYPE   ,
+    PAR2TYPE     ,  K1K2CONSTANTS  , KSO4CONSTANTS , pHSCALEIN      , SAL        ,
+    PO4          ,  SI             , KIVEC         , KOVEC          , TVEC*1e6   ,
+    KCa_input    ,  KAr_input      , KCa_output    , KAr_output     ,
+)
 
 HEADERS = ["TAlk","TCO2","pHin","pCO2in","fCO2in","HCO3in","CO3in",
     "CO2in","BAlkin","OHin","PAlkin","SiAlkin","Hfreein","RFin",
@@ -627,7 +629,8 @@ HEADERS = ["TAlk","TCO2","pHin","pCO2in","fCO2in","HCO3in","CO3in",
     "pK2input","KWinput","KBinput","KFinput","KSinput","KP1input","KP2input",
     "KP3input","KSiinput","KNH4input","KH2Sinput","K0output","K1output","K2output","pK1output",
     "pK2output","KWoutput","KBoutput","KFoutput","KSoutput","KP1output",
-    "KP2output","KP3output","KSioutput","KNH4output","KH2Soutput","TB","TF","TS"]
+    "KP2output","KP3output","KSioutput","KNH4output","KH2Soutput","TB","TF","TS",
+    "KCainput", "KArinput", "KCaoutput", "KAroutput"]
 
     NICEHEADERS = [
         "01 - TAlk             (umol/kgSW) ",
@@ -714,7 +717,12 @@ HEADERS = ["TAlk","TCO2","pHin","pCO2in","fCO2in","HCO3in","CO3in",
         "82 - KH2Soutput       ()          ",
         "83 - TB               (umol/kgSW) ",
         "84 - TF               (umol/kgSW) ",
-        "85 - TS               (umol/kgSW) "]
+        "85 - TS               (umol/kgSW) ",
+        "86 - KCainput         ()          ",
+        "87 - KArinput         ()          ",
+        "88 - KCaoutput        ()          ",
+        "89 - KCaoutput        ()          ",
+    ]
 
 return DATA, HEADERS, NICEHEADERS
 
@@ -2047,7 +2055,7 @@ H = 10.0 .^ -pH
 CO3 = @. TC*K1*K2 / (K1*H + H^2 + K1*K2)
 OmegaCa = @. CO3 * Ca / KCa # OmegaCa, dimensionless
 OmegaAr = @. CO3 * Ca / KAr # OmegaAr, dimensionless
-return OmegaCa, OmegaAr
+return OmegaCa, OmegaAr, KCa, KAr
 end # end nested function
 
 
