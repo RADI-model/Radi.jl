@@ -124,6 +124,13 @@ function redox(
 end # function redox
 
 
+"CaCO3 mineral dissolution rates."
+function dissolve(
+    dCa::Float64,
+    dCO3::Float64,
+)
+
+
 "All reaction rates."
 function getreactions(
     dO2::Float64,
