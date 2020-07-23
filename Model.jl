@@ -542,7 +542,35 @@ for t in 1:ntps
         advect!(pclay, z)
         diffuse!(pclay, z)
         # --- Then do the reactions! -------------------------------------------
-        # OM degradation
+        # CO2 system equilibration
+        h = dH.then[z]
+        # Common to both methods:
+        alk_borate = Equilibrate.alk_borate(h, TB, KB)
+        alk_noncarbonate = (
+            Equilibrate.alk_ammonia(h, dtNH4.then[z], KNH3) +
+            alk_borate +
+            Equilibrate.alk_fluoride(h, TF, KF) +
+            Equilibrate.alk_phosphate(h, dtPO4.then[z], KP1, KP2, KP3) +
+            Equilibrate.alk_silicate(h, dSi_w, KSi) + 
+            Equilibrate.alk_sulfate(h, dtSO4.then[z], KSO4) +
+            Equilibrate.alk_sulfide(h, dtH2S.then[z], KH2S) +
+            Equilibrate.alk_water(h, Kw)
+        )
+        # # ==v==v== calc_pCO2 method ==v==v==v==v==v==v=
+        # gamma = dtCO2.then[z] / (dalk.then[z] - alk_noncarbonate)
+        # dH.now[z] = (K1 * (gamma - 1.0) +
+        #     sqrt((K1 * (1.0 - gamma))^2 - 4.0 * K1 * K2 * (1.0 - 2.0 * gamma))) / 2.0
+        # # ==^==^==^==^==^==^==^==^==^==^==^==^==^==^===
+        # ==v==v== Newton-Raphson method ==v==v==v==v==
+        alk_carbonate = Equilibrate.alk_carbonate(h, dtCO2.then[z], K1, K2)
+        alk_residual = dalk.then[z] - (alk_carbonate + alk_noncarbonate)
+        dalk_dh = Equilibrate.dalk_dh(h, dtCO2.then[z], alk_borate, K1, K2, KB, Kw)
+        h_delta = alk_residual / dalk_dh
+        dH.now[z] = h + h_delta
+        # ==^==^==^==^==^==^==^==^==^==^==^==^==^==^===
+        # End with carbonate ion concentration
+        dCO3 = dtCO2.then[z] * K1 * K2 / (K1 * K2 + K1 * dH.now[z] + dH.now[z]^2)
+        # Now get all reaction rates
         (
             rate_dO2,
             rate_dtCO2,
@@ -559,6 +587,8 @@ for t in 1:ntps
             rate_psoc,
             rate_pFeOH3,
             rate_pMnO2,
+            rate_pcalcite,
+            rate_paragonite,
         ) = React.rates(
             dO2.then[z],
             dtNO3.then[z],
@@ -571,39 +601,17 @@ for t in 1:ntps
             dMnII.then[z],
             pfoc.then[z] * kfast[z],
             psoc.then[z] * kslow[z],
+            pcalcite.then[z],
+            paragonite.then[z],
+            dCa.then[z],
+            dCO3,
+            KCa,
+            KAr,
             phiS_phi[z],
             RC,
             RN,
             RP,
         )
-        # CO2 system equilibration
-        h = dH.then[z]
-        # Common to both methods:
-        alk_borate = Equilibrate.alk_borate(h, TB, KB)
-        alk_noncarbonate = (
-            Equilibrate.alk_ammonia(h, dtNH4.then[z], KNH3) +
-            alk_borate +
-            Equilibrate.alk_fluoride(h, TF, KF) +
-            Equilibrate.alk_phosphate(h, dtPO4.then[z], KP1, KP2, KP3) +
-            Equilibrate.alk_silicate(h, dSi_w, KSi) + 
-            Equilibrate.alk_sulfate(h, dtSO4.then[z], KSO4) +
-            Equilibrate.alk_sulfide(h, dtH2S.then[z], KH2S) +
-            Equilibrate.alk_water(h, Kw)
-        )
-        # # ==v==v== calc_pCO2 method ==v==v==v==v==v==
-        # gamma = dtCO2.then[z] / (dalk.then[z] - alk_noncarbonate)
-        # dH.now[z] = (K1 * (gamma - 1.0) +
-        #     sqrt((K1 * (1.0 - gamma))^2 - 4.0 * K1 * K2 * (1.0 - 2.0 * gamma))) / 2.0
-        # # ==^==^==^==^==^==^==^==^==^==^==^==^==^==^===
-        # ==v==v== Newton-Raphson method ==v==v==v==v==
-        alk_carbonate = Equilibrate.alk_carbonate(h, dtCO2.then[z], K1, K2)
-        alk_residual = dalk.then[z] - (alk_carbonate + alk_noncarbonate)
-        dalk_dh = Equilibrate.dalk_dh(h, dtCO2.then[z], alk_borate, K1, K2, KB, Kw)
-        h_delta = alk_residual / dalk_dh
-        dH.now[z] = h + h_delta
-        # ==^==^==^==^==^==^==^==^==^==^==^==^==^==^===
-        # End with carbonate ion concentration
-        dCO3 = dtCO2.then[z] * K1 * K2 / (K1 * K2 + K1 * dH.now[z] + dH.now[z]^2)
         # React!
         react!(dO2, z, rate_dO2)
         react!(dtCO2, z, rate_dtCO2)
@@ -621,9 +629,9 @@ for t in 1:ntps
         # react!(proc, z, 0.0)  # "refractory" means it doesn't react!
         react!(pFeOH3, z, rate_pFeOH3)
         react!(pMnO2, z, rate_pMnO2)
-        # react!(pcalcite, z, rate_pcalcite)
-        # react!(paragonite, z, rate_paragonite)
-        # react!(pclay, z, rate_pclay)
+        react!(pcalcite, z, rate_pcalcite)
+        react!(paragonite, z, rate_paragonite)
+        # react!(pclay, z, 0.0)  # clay doesn't react either
     # ~~~ END SEDIMENT PROCESSING ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         # Save output if we are at a savepoint
         if tsave
