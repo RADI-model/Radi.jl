@@ -6,13 +6,13 @@ vars = fieldnames(radi);
 vars = vars(~ismember(vars, {'savetimes' 'depths'}));
 
 % Define timestep colours
-clr = jet(numel(radi.savetimes));
+clr = turbo(numel(radi.savetimes));
 
 % Plot all results
 figure(1)
 clf
 for v = 1:numel(vars)
-  subplot(4, 4, v)
+  subplot(4, 5, v)
   hold on
   for t = 1:numel(radi.savetimes)
     plot(radi.depths, radi.(vars{v})(:, t), 'color', clr(t, :))
