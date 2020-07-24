@@ -6,7 +6,7 @@ include("Model.jl")
 include("CO2System.jl")
 
 # Import site-specific settings
-include("IC_W29.jl")
+include("IC_SM7.jl")
 
 "Convenient wrapper function for running RADI."
 function go(initial::Dict)
@@ -34,6 +34,7 @@ function go(initial::Dict)
         paragonite,
         pclay,
         dH,
+        phi,
     ) = Model.timeloop(
         stoptime,
         interval,
@@ -116,6 +117,7 @@ function go(initial::Dict)
         :paragonite => paragonite,
         :pclay => pclay,
         :dH => dH,
+        :phi => phi;
     )
 end  # function go
 
@@ -161,7 +163,7 @@ function save(results::Dict)
     save(results, "")
 end  # function save
 
-    
+
 # Run the model for the first time
 initial = Dict(
     :dO2 => dO2_i,

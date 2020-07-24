@@ -453,6 +453,7 @@ pcalcite = makeSolid(pcalcite_i, Fcalcite, D_bio)
 paragonite = makeSolid(paragonite_i, Faragonite, D_bio)
 pclay = makeSolid(pclay_i, Fclay, D_bio)
 dH = makeSolute(dH_i, 0.0, D_dalk_tort2)  # just for internal storage
+
 # Main Radi model loop
 for t in 1:ntps
     tsave = t in savepoints  # i.e. do we save after this step?
@@ -551,7 +552,7 @@ for t in 1:ntps
             alk_borate +
             Equilibrate.alk_fluoride(h, TF, KF) +
             Equilibrate.alk_phosphate(h, dtPO4.then[z], KP1, KP2, KP3) +
-            Equilibrate.alk_silicate(h, dSi_w, KSi) + 
+            Equilibrate.alk_silicate(h, dSi_w, KSi) +
             Equilibrate.alk_sulfate(h, dtSO4.then[z], KSO4) +
             Equilibrate.alk_sulfide(h, dtH2S.then[z], KH2S) +
             Equilibrate.alk_water(h, Kw)
@@ -683,6 +684,7 @@ for t in 1:ntps
         paragonite.then[z] = paragonite.now[z]
         pclay.then[z] = pclay.now[z]
         dH.then[z] = dH.now[z]
+
     end  # for z in 2:(ndepths-1)
 end  # for t, main Radi model loop
 # ===== End of main model loop =================================================
@@ -714,6 +716,7 @@ return (
     paragonite.save,
     pclay.save,
     dH.save,
+    phi,
 )
 end  # function model
 
