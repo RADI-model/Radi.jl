@@ -717,6 +717,12 @@ return (
     pclay.save,
     dH.save,
     phi,
+    u,
+    w,
+    alpha,
+    D_bio,
+    kfast,
+    kslow,
 )
 end  # function model
 

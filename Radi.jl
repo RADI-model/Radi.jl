@@ -35,6 +35,12 @@ function go(initial::Dict)
         pclay,
         dH,
         phi,
+        u,
+        w,
+        alpha,
+        D_bio,
+        kfast,
+        kslow,
     ) = Model.timeloop(
         stoptime,
         interval,
@@ -117,7 +123,13 @@ function go(initial::Dict)
         :paragonite => paragonite,
         :pclay => pclay,
         :dH => dH,
-        :phi => phi;
+        :phi => phi,
+        :u => u,
+        :w => w,
+        :alpha => alpha,
+        :D_bio => D_bio,
+        :kfast => kfast,
+        :kslow => kslow,
     )
 end  # function go
 
