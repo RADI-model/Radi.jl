@@ -40,7 +40,7 @@ dtH2S_w = 0.0  # assumed
 dFeII_w = 2e-6rho_sw  # typical for deep-sea oxic bottom waters (Archer et al., 2002)
 dMnII_w = 0.0  # typical for deep-sea oxic bottom waters (Archer et al., 2002)
 dalk_w = 2426e-6rho_sw  # total alkalinity from GLODAP at station location, bottom waters
-dCa_w = 0.02128 / 40.087 * S / 1.80655  # calcium from salinity (RT67 via PyCO2SYS)
+dCa_w = 0.02128 / 40.087 * S / 1.80655 * rho_sw  # calcium from salinity (RT67 via PyCO2SYS)
 dSi_w = 120e-6rho_sw  # total silicate
 
 # Define organic matter flux to the surface sediment
