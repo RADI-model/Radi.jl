@@ -136,6 +136,7 @@ function dissolve_precipitate_CaCO3(
     # Saturation states
     OmegaCa = dCa * dCO3 / KCa
     OmegaAr = dCa * dCO3 / KAr
+
     # Calcite dissolution rate from Naviaux et al. (2019) Marine Chemistry
     if 0.8275 < OmegaCa <= 1.0
         Rdiss_calcite = pcalcite * 400.0 * 6.32e-5 * (1.0 - OmegaCa) ^ 0.11
@@ -156,7 +157,7 @@ function dissolve_precipitate_CaCO3(
     # normalised to the same surface area as dissolution (4m^2/g)
     if OmegaCa > 1.0
         Rprec_calcite = 1.63 * (OmegaCa - 1.0) ^ 1.76
-    else 
+    else
         Rprec_calcite = 0.0
     end
     # Aragonite does not currently precipitate
@@ -294,11 +295,11 @@ function reactions2rates(
             (RN - RP + 4.0RC) * Rdeg_pMnO2 +
             (RN - RP + 8.0RC) * Rdeg_pFeOH3 +
             (RN - RP + 1.0RC) * Rdeg_dtSO4 +
-            2.0 * Rdiss_CaCO3
-        ) - 2.0 * (R_dMnII + R_dFeII + R_dNH3 + R_dH2S)
+            2.0 * Rdiss_CaCO3) -
+            2.0 * (R_dMnII + R_dFeII + R_dNH3 + R_dH2S)
     # CaCO3 minerals
-    rate_pcalcite = 0.0
-    rate_paragonite = 0.0
+    rate_pcalcite = - Rdiss_calcite + Rprec_calcite
+    rate_paragonite = - Rdiss_aragonite
     return (
         rate_dO2,
         rate_dtCO2,
