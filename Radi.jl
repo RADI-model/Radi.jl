@@ -6,7 +6,7 @@ include("Model.jl")
 include("CO2System.jl")
 
 # Import site-specific settings
-include("IC_SM7.jl")
+include("IC_H9.jl")
 
 "Convenient wrapper function for running RADI."
 function go(initial::Dict)
