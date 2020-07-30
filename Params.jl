@@ -84,7 +84,7 @@ end  # function kfast
 
 "Calculate slow-degrading POC degradation parameter."
 function kslow(Fpoc::Float64, depths::Array{Float64,1}, lambda_s::Float64)
-    kslow_0 = 1.8e-4(1e2Fpoc)^0.85
+    kslow_0 = 1.2e-4(1e2Fpoc)^0.85
     return @. kslow_0*exp(-depths/lambda_s)
 end  # function kslow
 
