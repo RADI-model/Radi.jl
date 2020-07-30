@@ -78,13 +78,13 @@ end  # function krefractory
 
 "Calculate fast-degrading POC degradation parameter."
 function kfast(Fpoc::Float64, depths::Array{Float64,1}, lambda_f::Float64)
-    kfast_0 = 3e-1(1e2Fpoc)^0.85
+    kfast_0 = 1.5e-1(1e2Fpoc)^0.85
     return @. kfast_0*exp(-depths/lambda_f)
 end  # function kfast
 
 "Calculate slow-degrading POC degradation parameter."
 function kslow(Fpoc::Float64, depths::Array{Float64,1}, lambda_s::Float64)
-    kslow_0 = 3e-4(1e2Fpoc)^0.85
+    kslow_0 = 1.8e-4(1e2Fpoc)^0.85
     return @. kslow_0*exp(-depths/lambda_s)
 end  # function kslow
 
