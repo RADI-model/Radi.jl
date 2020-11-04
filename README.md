@@ -8,6 +8,12 @@ Still a work in progress, but getting there.
 
 ### Run the model in Julia
 
+  1. Prepare a settings script (e.g. [IC_W29.jl](https://github.com/mvdh7/Radi.jl/blob/master/IC_W29.jl)) that contains the initial conditions for the problem to be investigated.
+  
+  2. `include` this script towards the the top of the main [Radi.jl](https://github.com/mvdh7/Radi.jl/blob/master/Radi.jl) code.
+
+  3. Run the following in Julia:
+
 ```julia
 # This sets things up and runs the model from initial constant conditions:
 include("Radi.jl")
