@@ -1,6 +1,5 @@
 module Model
 
-using Base.SimdLoop
 include("gsw_rho.jl")
 include("Params.jl")
 include("React.jl")
@@ -26,14 +25,22 @@ struct Solid
 end  # struct Solute
 
 "Constructor for a Solute."
-function Solute(var_start::Array{Float64,1}, above::Float64,
-        dvar::Array{Float64,1}, var_save::Array{Float64,2})
+function Solute(
+    var_start::Array{Float64,1},
+    above::Float64,
+    dvar::Array{Float64,1},
+    var_save::Array{Float64,2},
+)
     Solute(copy(var_start), copy(var_start), above, dvar, var_save)
 end  # function Solute
 
 "Constructor for a Solid."
-function Solid(var_start::Array{Float64,1}, above::Float64,
-        dvar::Array{Float64,1}, var_save::Array{Float64,2})
+function Solid(
+    var_start::Array{Float64,1},
+    above::Float64,
+    dvar::Array{Float64,1},
+    var_save::Array{Float64,2},
+)
     Solid(copy(var_start), copy(var_start), above, dvar, var_save)
 end  # function Solid
 
@@ -64,8 +71,9 @@ function prepdepth(depth_res::Float64, depth_max::Float64)
 end  # function prepdepth
 
 "Assemble depth-dependent porosity parameters."
-function porosity(phi0::Float64, phiInf::Float64, beta::Float64,
-        depths::Array{Float64})
+function porosity(
+    phi0::Float64, phiInf::Float64, beta::Float64, depths::Array{Float64},
+)
     phi = Params.phi(phi0, phiInf, beta, depths)
     phiS = Params.phiS(phi)  # solid volume fraction
     phiS_phi = phiS./phi
@@ -157,9 +165,9 @@ Mpom = Params.rmm_pom(RC, RN, RP)  # g/mol
 Fpom_mol = Fpom / Mpom  # mol/m^2/a
 Fpoc = Fpom_mol * RC  # mol/m^2/a
 # Split total flux into fast-slow-refractory portions
-Ffoc = Fpoc*Fpom_f
-Fsoc = Fpoc*Fpom_s
-Froc = Fpoc*Fpom_r
+Ffoc = Fpoc * Fpom_f
+Fsoc = Fpoc * Fpom_s
+Froc = Fpoc * Fpom_r
 if Fpom_f + Fpom_s + Fpom_r != 1.0
     println("\nRadi WARNING: the fractions of POM do not add up to 1!\n")
 end
@@ -168,7 +176,7 @@ M_MnO2 = 86.9368  # g/mol
 M_FeOH3 = 106.867  # g/mol
 M_CaCO3 = 100.0869  # g/mol
 M_clay = 360.31  # g/mol (montmorillonite)
-Fp = Fpom + FMnO2*M_MnO2 + FFeOH3*M_FeOH3 + (Fcalcite + Faragonite)*M_CaCO3 + Fclay*M_clay
+Fp = Fpom + FMnO2 * M_MnO2 + FFeOH3 * M_FeOH3 + (Fcalcite + Faragonite) * M_CaCO3 + Fclay * M_clay
 
 # Bioturbation (for solids)
 D_bio_0 = Params.D_bio_0(Fpoc)
@@ -186,7 +194,7 @@ kslow = Params.kslow(Fpoc, depths, lambda_s)
 # Solid fluxes and solid initial conditions
 x0 = Params.x0(Fp, rho_p, phiS[2])
 # ^[m/a] bulk burial velocity at sediment-water interface
-xinf = Params.xinf(x0, phiS[2], phiS[end-1])
+xinf = Params.xinf(x0, phiS[2], phiS[end - 1])
 # ^[m/a] bulk burial velocity at the infinite depth
 u = Params.u(xinf, phi)  # [m/a] porewater burial velocity
 w = Params.w(xinf, phiS)  # [m/a] solid burial velocity
@@ -307,8 +315,7 @@ function makeSolute(var_start::Float64, above::Float64, D_var::Array{Float64})
 end  # function makeSolute
 
 "Prepare Solute with starting array provided."
-function makeSolute(var_start::Array{Float64,1}, above::Float64,
-        D_var::Array{Float64})
+function makeSolute(var_start::Array{Float64,1}, above::Float64, D_var::Array{Float64})
     var_start = vcat(NaN, var_start, NaN)
     var_save = fill(NaN, (ndepths-2, nsps+1))
     var_save[:, 1] = var_start[2:end-1]
@@ -379,9 +386,15 @@ function react!(var::SolidOrSolute, z::Int, rate::Float64)
 end  # function react!
 
 "Calculate advection rate for a solute."
-function advectsolute(then_z1p::Float64, then_z1m::Float64, u_z::Float64,
-        delta_phi_z::Float64, phi_z::Float64, delta_tort2i_tort2_z::Float64,
-        D_var::Float64)
+function advectsolute(
+    then_z1p::Float64,
+    then_z1m::Float64,
+    u_z::Float64,
+    delta_phi_z::Float64,
+    phi_z::Float64,
+    delta_tort2i_tort2_z::Float64,
+    D_var::Float64,
+)
     return -(u_z - delta_phi_z*D_var/phi_z -
         D_var*delta_tort2i_tort2_z) * (then_z1p - then_z1m)/(2.0z_res)
 end  # function advect
@@ -393,9 +406,15 @@ function advect!(var::Solute, z::Int)
 end  # function advect!
 
 "Calculate advection rate for a solid."
-function advectsolid(then_z::Float64, then_z1p::Float64, then_z1m::Float64,
-        APPW_z::Float64, sigma_z::Float64, sigma1p_z::Float64,
-        sigma1m_z::Float64)
+function advectsolid(
+    then_z::Float64,
+    then_z1p::Float64,
+    then_z1m::Float64,
+    APPW_z::Float64,
+    sigma_z::Float64,
+    sigma1p_z::Float64,
+    sigma1m_z::Float64,
+)
     return -APPW_z*(sigma1m_z*then_z1p + 2.0sigma_z*then_z -
         sigma1p_z*then_z1m)/(2.0z_res)
 end  # function advectsolid
@@ -410,15 +429,20 @@ function advect!(var::Solid, z::Int)
 end  # function advect!
 
 "Calculate diffusion rate of a solute or solid."
-function diffuse(then_z1m::Float64, then_z::Float64, then_z1p::Float64,
-        D_var::Float64)
-    return (then_z1m - 2.0then_z + then_z1p)*D_var/z_res2
+function diffuse(
+    then_z1m::Float64,
+    then_z::Float64,
+    then_z1p::Float64,
+    D_var::Float64,
+)
+    return (then_z1m - 2.0then_z + then_z1p) * D_var / z_res2
 end  # function diffuse
 
 "Diffuse a Solute or Solid."
 function diffuse!(var::SolidOrSolute, z::Int)
-    var.now[z] += interval*diffuse(var.then[z-1], var.then[z], var.then[z+1],
-        var.dvar[z])
+    var.now[z] += interval * diffuse(
+        var.then[z-1], var.then[z], var.then[z+1], var.dvar[z]
+    )
 end  # function diffuse!
 
 "Calculate irrigation rate of a solute."
@@ -477,7 +501,8 @@ for t in 1:ntps
     substitute!(pcalcite)
     substitute!(paragonite)
     substitute!(pclay)
-    @simd for z in 2:(ndepths-1)
+    substitute!(dO2)
+    for z in 2:(ndepths-1)
     # ~~~ BEGIN SEDIMENT PROCESSING ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         # --- First, do all the physical processes -----------------------------
         # Dissolved oxygen (solute)
@@ -663,7 +688,7 @@ for t in 1:ntps
         end
     end  # for z in 2:(ndepths-1)
     # Copy results into "previous step" arrays *after* whole sediment column is processed
-    @simd for z in 2:(ndepths-1)
+    for z in 2:(ndepths-1)
         dO2.then[z] = dO2.now[z]
         dtCO2.then[z] = dtCO2.now[z]
         dtNO3.then[z] = dtNO3.now[z]
