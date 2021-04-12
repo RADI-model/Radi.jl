@@ -4,22 +4,18 @@ The one-dimensional reactive-advective-diffusive-irrigative diagenetic sediment 
 
 ## Instructions
 
-Still a work in progress, but getting there.
-
 ### Run the model in Julia
 
-  1. Prepare a settings script (e.g. [IC_W29.jl](https://github.com/mvdh7/Radi.jl/blob/master/IC_W29.jl)) that contains the initial conditions for the problem to be investigated.
-  
-  2. `include` this script towards the the top of the main [Radi.jl](https://github.com/mvdh7/Radi.jl/blob/master/Radi.jl) code.
+First, prepare a setup script (e.g. [setup/IC_W29.jl](https://github.com/radi-models/Radi.jl/blob/master/setup/IC_W29.jl)) that contains the initial conditions for the problem to be investigated.
 
-  3. Run the following in Julia:
+Then, in Julia:
 
 ```julia
-# This sets things up and runs the model from initial constant conditions:
+# Import the RADI model
 include("Radi.jl")
 
-# Now save the results dictionary in the main scope, for convenience:
-results = Radi.results;
+# Run RADI for the first time
+results = Radi.go("setup/IC_W29.jl")  # or a different setup script
 
 # Access the different variables:
 results[:savetimes]  # time of savepoints in years
@@ -27,14 +23,16 @@ results[:depths]  # model depths in m
 results[:dO2]  # dissolved oxygen (rows = depths, columns = savetimes)
 # and so on.
 
-# Do a new run starting at the previous endpoint (overwrites previous dictionary):
+# Do a new run starting at the previous endpoint (overwrites previous results):
 results = Radi.again(results)
+# this uses internal settings from whichever file was last used with Radi.go().
 
-# Save the new set of results as a .mat file in /results/:
+# At any point, save the results as "results/IC_W29.mat":
 Radi.save(results)  # overwrite original file, or...
 Radi.save(results, "_more")  # ... append "_more" to the file name
+# the "IC_W29" part of the filename is defined by `modelrun` in the setup file
 ```
 
-### Plot the results in Octave/MATLAB
+### Plot the results in GNU Octave/MATLAB
 
-Julia no longer generates a plot of the results, but instead saves the results to a .mat file in the [`results/`](results) directory.  Use [`plot/everything.m`](plot/everything.m) to import and plot the results saved by Julia in Octave or MATLAB.
+Julia does not generate a plot of the results, but instead saves the results to a .mat file in the [`results/`](results) directory.  Use [`plot/everything.m`](plot/everything.m) to import and plot the results saved by Julia in GNU Octave/MATLAB.
