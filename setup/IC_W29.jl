@@ -2,7 +2,7 @@
 const modelrun = "IC_W29"
 
 # Define model timesteps (all times in years)
-const stoptime = 0.5 #  5.0  # how long to run for
+const stoptime = 5.0  # how long to run for
 const interval = 1/128000  # duration of each model timestep
 const saveperXsteps = 128000  # save results in intervals of this many timesteps
 

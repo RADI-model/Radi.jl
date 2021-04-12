@@ -2,7 +2,7 @@
 const modelrun = "IC_H9"
 
 # Define model timesteps (all times in years)
-const stoptime = 10.0  # 4000.0  # how long to run for
+const stoptime = 4.0  # 4000.0  # how long to run for
 const interval = 1/14000  # duration of each model timestep
 const saveperXsteps = 14000  # save results in intervals of this many timesteps
 
