@@ -53,4 +53,6 @@ The DOI above is the 'concept DOI' for all versions of Radi.jl; it will always a
 
   * v0.2: [doi.org/10.5281/zenodo.4680229](doi.org/10.5281/zenodo.4680229).
 
+The rest of the citation remains the same.
+
 There is also a manuscript in preparation that will describe RADI in detail.  Please check back here later for details.
