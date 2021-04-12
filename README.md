@@ -6,9 +6,9 @@ The one-dimensional reactive-advective-diffusive-irrigative diagenetic sediment 
 
 ### Run the model in Julia
 
-Clone or otherwise save this repo locally.
+Clone or otherwise save this repo locally.  You need at least the main [Radi.jl](Radi.jl) file and the directory [modules](modules) plus all its contents.
 
-Next, prepare a setup script (e.g. [setup/IC_W29.jl](https://github.com/RADI-model/Radi.jl/blob/master/setup/IC_W29.jl)) that contains the initial conditions for the problem to be investigated.
+Next, prepare a setup script (e.g. [setup/IC_W29.jl](setup/IC_W29.jl)) that contains the initial conditions for the problem to be investigated.
 
 Then, in Julia:
 
@@ -37,4 +37,4 @@ Radi.save(results, "_more")  # ... append "_more" to the file name
 
 ### Plot the results in GNU Octave/MATLAB
 
-Julia does not generate a plot of the results, but instead saves the results to a .mat file in the [`results/`](results) directory.  Use [`plot/everything.m`](plot/everything.m) to import and plot the results saved by Julia in GNU Octave/MATLAB.
+Julia does not generate a plot of the results, but instead saves the results to a .mat file in the [results](results) directory.  Use [plot/everything.m](plot/everything.m) to import and plot the results saved by Julia in GNU Octave/MATLAB.

@@ -1,9 +1,9 @@
 module Radi
 
 using MAT
-include("gsw_rho.jl")
-include("Model.jl")
-include("CO2System.jl")
+include("modules/gsw_rho.jl")
+include("modules/Model.jl")
+include("modules/CO2System.jl")
 
 
 "Convenient wrapper function for running RADI."
