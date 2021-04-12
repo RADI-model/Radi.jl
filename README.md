@@ -1,5 +1,7 @@
 # Radi.jl
 
+[![DOI](https://img.shields.io/badge/DOI-10.5281%2Fzenodo.4680228-informational)](https://doi.org/10.5281/zenodo.4680228)
+
 The one-dimensional reactive-advective-diffusive-irrigative diagenetic sediment module in Julia.
 
 ## Instructions
@@ -38,3 +40,17 @@ Radi.save(results, "_more")  # ... append "_more" to the file name
 ### Plot the results in GNU Octave/MATLAB
 
 Julia does not generate a plot of the results, but instead saves the results to a .mat file in the [results](results) directory.  Use [plot/everything.m](plot/everything.m) to import and plot the results saved by Julia in GNU Octave/MATLAB.
+
+## Citation
+
+To cite this Julia implementation of RADI, please use:
+
+> Humphreys, M. P., and Sulpis, O. (2021). **Radi.jl: the reactive-advective-diffusive-irrigative diagenetic sediment module in Julia.**  *Zenodo.*  [doi:10.5281/zenodo.4680228](https://doi.org/10.5281/zenodo.4680228).
+
+[Bibtex version available here.](radi_jl_2021.bib)
+
+The DOI above is the 'concept DOI' for all versions of Radi.jl; it will always automatically resolve to the latest release.  If you use a specific version of Radi.jl, please explicitly state the version, and switch to the relevant version-specific DOI:
+
+  * v0.2: [doi.org/10.5281/zenodo.4680229](doi.org/10.5281/zenodo.4680229).
+
+There is also a manuscript in preparation that will describe RADI in detail.  Please check back here later for details.
