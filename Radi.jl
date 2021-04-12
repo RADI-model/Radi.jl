@@ -5,12 +5,160 @@ include("gsw_rho.jl")
 include("Model.jl")
 include("CO2System.jl")
 
-# Import site-specific settings
-include("IC_H9.jl")
 
 "Convenient wrapper function for running RADI."
 function go(initial::Dict)
+    @time (
+        savetimes,
+        depths,
+        dO2,
+        dtCO2,
+        dtNO3,
+        dtSO4,
+        dtPO4,
+        dtNH4,
+        dtH2S,
+        dFeII,
+        dMnII,
+        dalk,
+        dCa,
+        pfoc,
+        psoc,
+        proc,
+        pFeOH3,
+        pMnO2,
+        pcalcite,
+        paragonite,
+        pclay,
+        dH,
+        phi,
+        u,
+        w,
+        alpha,
+        D_bio,
+        kfast,
+        kslow,
+    ) = Model.timeloop(
+        stoptime,
+        interval,
+        saveperXsteps,
+        z_max,
+        z_res,
+        dbl,
+        phiInf,
+        phi0,
+        beta,
+        lambda_b,
+        lambda_f,
+        lambda_s,
+        lambda_i,
+        T,
+        S,
+        P,
+        dO2_w,
+        dtCO2_w,
+        dtNO3_w,
+        dtSO4_w,
+        dtPO4_w,
+        dtNH4_w,
+        dtH2S_w,
+        dFeII_w,
+        dMnII_w,
+        dalk_w,
+        dCa_w,
+        dSi_w,
+        Fpom,
+        Fpom_r,
+        Fpom_s,
+        Fpom_f,
+        FMnO2,
+        FFeOH3,
+        Fcalcite,
+        Faragonite,
+        Fclay,
+        rho_p,
+        initial[:dO2],
+        initial[:dtCO2],
+        initial[:dtNO3],
+        initial[:dtSO4],
+        initial[:dtPO4],
+        initial[:dtNH4],
+        initial[:dtH2S],
+        initial[:dFeII],
+        initial[:dMnII],
+        initial[:dalk],
+        initial[:dCa],
+        initial[:pfoc],
+        initial[:psoc],
+        initial[:proc],
+        initial[:pFeOH3],
+        initial[:pMnO2],
+        initial[:pcalcite],
+        initial[:paragonite],
+        initial[:pclay],
+    )
+    return Dict(
+        :savetimes => savetimes,
+        :depths => depths,
+        :dO2 => dO2,
+        :dtCO2 => dtCO2,
+        :dtNO3 => dtNO3,
+        :dtSO4 => dtSO4,
+        :dtPO4 => dtPO4,
+        :dtNH4 => dtNH4,
+        :dtH2S => dtH2S,
+        :dFeII => dFeII,
+        :dMnII => dMnII,
+        :dalk => dalk,
+        :dCa => dCa,
+        :pfoc => pfoc,
+        :psoc => psoc,
+        :proc => proc,
+        :pFeOH3 => pFeOH3,
+        :pMnO2 => pMnO2,
+        :pcalcite => pcalcite,
+        :paragonite => paragonite,
+        :pclay => pclay,
+        :dH => dH,
+        :phi => phi,
+        :u => u,
+        :w => w,
+        :alpha => alpha,
+        :D_bio => D_bio,
+        :kfast => kfast,
+        :kslow => kslow,
+    )
+end  # function go
+
+
+"Convenient wrapper function for running RADI from a filename."
+function go(filename::String)
     Model.sayhello()
+    # Import site-specific settings
+    include(filename)
+    # Create and return initial dict
+    initial = Dict(
+        :dO2 => dO2_i,
+        :dtCO2 => dtCO2_i,
+        :dtNO3 => dtNO3_i,
+        :dtSO4 => dtSO4_i,
+        :dtPO4 => dtPO4_i,
+        :dtNH4 => dtNH4_i,
+        :dtH2S => dtH2S_i,
+        :dFeII => dFeII_i,
+        :dMnII => dMnII_i,
+        :dalk => dalk_i,
+        :dCa => dCa_i,
+        :pfoc => pfoc_i,
+        :psoc => psoc_i,
+        :proc => proc_i,
+        :pFeOH3 => pFeOH3_i,
+        :pMnO2 => pMnO2_i,
+        :pcalcite => pcalcite_i,
+        :paragonite => paragonite_i,
+        :pclay => pclay_i,
+    )
+    # Run RADI
     @time (
         savetimes,
         depths,
@@ -174,32 +322,6 @@ end  # function save
 function save(results::Dict)
     save(results, "")
 end  # function save
-
-
-# Run the model for the first time
-initial = Dict(
-    :dO2 => dO2_i,
-    :dtCO2 => dtCO2_i,
-    :dtNO3 => dtNO3_i,
-    :dtSO4 => dtSO4_i,
-    :dtPO4 => dtPO4_i,
-    :dtNH4 => dtNH4_i,
-    :dtH2S => dtH2S_i,
-    :dFeII => dFeII_i,
-    :dMnII => dMnII_i,
-    :dalk => dalk_i,
-    :dCa => dCa_i,
-    :pfoc => pfoc_i,
-    :psoc => psoc_i,
-    :proc => proc_i,
-    :pFeOH3 => pFeOH3_i,
-    :pMnO2 => pMnO2_i,
-    :pcalcite => pcalcite_i,
-    :paragonite => paragonite_i,
-    :pclay => pclay_i,
-)
-results = go(initial)
-save(results)
 
 
 function check_pH(results)
