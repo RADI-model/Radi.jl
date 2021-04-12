@@ -1,5 +1,5 @@
 {
-    "description": "Miscellaneous tools for marine carbonate chemistry", 
+    "description": "Radi.jl: the reactive-advective-diffusive-irrigative diagenetic sediment module in Julia", 
     "license": "GPL-3.0-only", 
     "title": "Radi.jl: the reactive-advective-diffusive-irrigative diagenetic sediment module in Julia", 
     "creators": [
