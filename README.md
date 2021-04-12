@@ -6,7 +6,9 @@ The one-dimensional reactive-advective-diffusive-irrigative diagenetic sediment 
 
 ### Run the model in Julia
 
-First, prepare a setup script (e.g. [setup/IC_W29.jl](https://github.com/radi-models/Radi.jl/blob/master/setup/IC_W29.jl)) that contains the initial conditions for the problem to be investigated.
+Clone or otherwise save this repo locally.
+
+Next, prepare a setup script (e.g. [setup/IC_W29.jl](https://github.com/radi-models/Radi.jl/blob/master/setup/IC_W29.jl)) that contains the initial conditions for the problem to be investigated.
 
 Then, in Julia:
 
