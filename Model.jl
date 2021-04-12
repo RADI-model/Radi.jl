@@ -168,7 +168,7 @@ Fpoc = Fpom_mol * RC  # mol/m^2/a
 Ffoc = Fpoc * Fpom_f
 Fsoc = Fpoc * Fpom_s
 Froc = Fpoc * Fpom_r
-if Fpom_f + Fpom_s + Fpom_r != 1.0
+if !(Fpom_f + Fpom_s + Fpom_r ≈ 1.0)
     println("\nRadi WARNING: the fractions of POM do not add up to 1!\n")
 end
 # `Fp` = total sediment flux to bottom in g/m^2/a
