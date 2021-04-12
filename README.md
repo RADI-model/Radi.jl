@@ -1,3 +1,9 @@
+- [Radi.jl](#radijl)
+  - [Instructions](#instructions)
+    - [Run the model in Julia](#run-the-model-in-julia)
+    - [Plot the results in GNU Octave/MATLAB](#plot-the-results-in-gnu-octavematlab)
+  - [Citation](#citation)
+
 # Radi.jl
 
 [![DOI](https://img.shields.io/badge/DOI-10.5281%2Fzenodo.4680228-informational)](https://doi.org/10.5281/zenodo.4680228)
