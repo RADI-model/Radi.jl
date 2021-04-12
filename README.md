@@ -61,4 +61,4 @@ The DOI above is the 'concept DOI' for all versions of Radi.jl; it will always a
 
 The rest of the citation remains the same.
 
-There is also a manuscript in preparation that will describe RADI in detail.  Please check back here later for details.
+There is also a manuscript in preparation that will describe RADI in detail.  Radi.jl v1.0 will be released following peer review.  Please check back here later for details.
