@@ -1,0 +1,17 @@
+{
+    "description": "Miscellaneous tools for marine carbonate chemistry", 
+    "license": "GPL-3.0-only", 
+    "title": "Radi.jl: the reactive-advective-diffusive-irrigative diagenetic sediment module in Julia", 
+    "creators": [
+        {
+            "affiliation": "NIOZ Royal Netherlands Institute for Sea Research, Department of Ocean Systems, Texel, the Netherlands", 
+            "name": "Humphreys, Matthew P.",
+            "orcid": "0000-0002-9371-7128"
+        },
+        {
+            "affiliation": "Utrecht University, Department of Earth Sciences, Utrecht, the Netherlands", 
+            "name": "Sulpis, Olivier",
+            "orcid": "0000-0002-6463-3320"
+        }
+    ]
+}
