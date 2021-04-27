@@ -79,13 +79,13 @@ end  # function krefractory
 "Calculate fast-degrading POC degradation parameter."
 function kfast(Fpoc::Float64, depths::Array{Float64,1}, lambda_f::Float64)
     kfast_0 = 1.5e-1(1e2Fpoc)^0.85
-    return @. kfast_0*exp(-depths/lambda_f)
+    return fill(kfast_0, size(depths))
 end  # function kfast
 
 "Calculate slow-degrading POC degradation parameter."
 function kslow(Fpoc::Float64, depths::Array{Float64,1}, lambda_s::Float64)
-    kslow_0 = 1.2e-4(1e2Fpoc)^0.85
-    return @. kslow_0*exp(-depths/lambda_s)
+    kslow_0 = 1.3e-4(1e2Fpoc)^0.85
+    return fill(kslow_0, size(depths))
 end  # function kslow
 
 "Calculate bulk burial velocity at the sediment-water interface in m/a."
@@ -112,41 +112,39 @@ function sigma(w::Array{Float64}, z_res::Float64, D_bio::Array{Float64})
 end  # function sigma
 
 "Calculate T-dependent 'free solution' diffusion coeff. for O2 in m^2/a."
-D_dO2(T::Float64) = 0.034862 + 0.001409T
+D_dO2(T::Float64) = 0.031558 + 0.001428T
 
 """Calculate T-dependent 'free solution' diffusion coeff. for tCO2 in m^2/a, as
 approximated by the bicarbonate diffusion coefficient of Hulse et al (2018).
 """
-D_dtCO2(T::Float64) = 0.015169 + 0.000793T
+D_dtCO2(T::Float64) = 0.015179 + 0.000795T
 
-"Nitrate diffusion coefficient from Li and Gregory (1974) in m^2/a."
-D_dtNO3(T::Float64) = 0.030842 + 0.001226T
+"Nitrate diffusion coefficient in m^2/a."
+D_dtNO3(T::Float64) = 0.030863 + 0.001153T
 
-"Sulfate diffusion coefficient from Li and Gregory (1974) in m^2/a."
-D_dtSO4(T::Float64) = 0.015768 + 0.000788T
+"Sulfate diffusion coefficient  in m^2/a."
+D_dtSO4(T::Float64) = 0.015779 + 0.000712T
 
-"Phosphate diffusion coefficient from Li and Gregory (1974) in m^2/a."
-D_dtPO4(T::Float64) = 0.011291 + 0.000559T
+"Phosphate diffusion coefficient  in m^2/a."
+D_dtPO4(T::Float64) = 0.009783 + 0.000513T
 
-"Ammonium diffusion coefficient from Li and Gregory (1974) in m^2/a."
-D_dtNH4(T::Float64) = 0.030905 + 0.001226T
+"Ammonium diffusion coefficient  in m^2/a."
+D_dtNH4(T::Float64) = 0.030926 + 0.001225T
 
-"""Hydrogen sulfide diffusion coefficient from the UNISENSE table by Ramsing and
-Gundersen in m^2/a.
-"""
-D_dtH2S(T::Float64) = 0.030748 + 0.000964T
+"""Hydrogen sulfide diffusion coefficient in m^2/a."""
+D_dtH2S(T::Float64) = 0.028938 + 0.001314T
 
-"Manganese diffusion coefficient from Li and Gregory (1974) in m^2/a."
-D_dMn(T::Float64) = 0.0086 + 0.001525T
+"Manganese diffusion coefficient in m^2/a."
+D_dMn(T::Float64) = 0.009625 + 0.000481T
 
-"Iron diffusion coefficient from Li and Gregory (1974) in m^2/a."
-D_dFe(T::Float64) = 0.0108 + 0.001478T
+"Iron diffusion coefficient in m^2/a."
+D_dFe(T::Float64) = 0.010761 + 0.000466T
 
-"Bicarbonate diffusion coefficient from Hulse et al. (2018) in m^2/a."
-D_dHCO3(T::Float64) = 0.015169 + 0.000793T
+"Bicarbonate diffusion coefficient in m^2/a."
+D_dHCO3(T::Float64) = 0.015179 + 0.000795T
 
-"Calcium diffusion coefficient from Li and Gregory (1974) in m^2/a."
-D_dCa(T::Float64) = 0.0107 + 0.001677T
+"Calcium diffusion coefficient in m^2/a."
+D_dCa(T::Float64) = 0.011771 + 0.000529T
 
 "Calculate alpha_0 parameter for irrigation (Archer et al. 2002)."
 function alpha_0(Fpoc::Float64, dO2_w::Float64)

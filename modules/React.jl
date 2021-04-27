@@ -139,24 +139,24 @@ function dissolve_precipitate_CaCO3(
 
     # Calcite dissolution rate from Naviaux et al. (2019) Marine Chemistry
     if 0.8275 < OmegaCa <= 1.0
-        Rdiss_calcite = pcalcite * 400.0 * 6.32e-5 * (1.0 - OmegaCa) ^ 0.11
+        Rdiss_calcite = pcalcite * 0.00632 * (1.0 - OmegaCa) ^ 0.11
     elseif OmegaCa <= 0.8275  # this is the Omega value for which both laws are equal
-        Rdiss_calcite = pcalcite * 400.0 * 0.2 * (1.0 - OmegaCa) ^ 4.7
+        Rdiss_calcite = pcalcite * 20.0 * (1.0 - OmegaCa) ^ 4.7
     else
         Rdiss_calcite = 0.0
     end  # calcite dissolution rate
     # Aragonite dissolution rate from Dong et al. (2019) EPSL
     if 0.835 < OmegaAr <= 1.0
-        Rdiss_aragonite = paragonite * 200.0 * 7.6e-5 * (1.0 - OmegaAr) ^ 0.13
+        Rdiss_aragonite = paragonite * 0.0038000000000000004 * (1.0 - OmegaAr) ^ 0.13
     elseif OmegaAr <= 0.835
-        Rdiss_aragonite = paragonite * 200.0 * 8.4e-4 * (1.0 - OmegaAr) ^ 1.46
+        Rdiss_aragonite = paragonite * 0.042 * (1.0 - OmegaAr) ^ 1.46
     else
         Rdiss_aragonite = 0.0
     end   # aragonite dissolution rate
     # Calcite precipitation rate from Zuddas and Mucci, GCA (1998),
     # normalised to the same surface area as dissolution (4m^2/g)
     if OmegaCa > 1.0
-        Rprec_calcite = 1.63 * (OmegaCa - 1.0) ^ 1.76
+        Rprec_calcite = 0.4075 * (OmegaCa - 1.0) ^ 1.76
     else
         Rprec_calcite = 0.0
     end
