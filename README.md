@@ -57,7 +57,8 @@ To cite this Julia implementation of RADI, please use:
 
 The DOI above is the 'concept DOI' for all versions of Radi.jl; it will always automatically resolve to the latest release.  If you use a specific version of Radi.jl, please explicitly state the version, and switch to the relevant version-specific DOI:
 
-  * v0.2: [doi.org/10.5281/zenodo.4680229](doi.org/10.5281/zenodo.4680229).
+  * v0.3: [doi:10.5281/zenodo.5005650](https://doi.org/10.5281/zenodo.5005650).
+  * v0.2: [doi:10.5281/zenodo.4680229](https://doi.org/10.5281/zenodo.4680229).
 
 The rest of the citation remains the same.
 
