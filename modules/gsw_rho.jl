@@ -58,9 +58,9 @@ function gsw_rho(SA, CT, p)
 #
 # =========================================================================
 
-#--------------------------------------------------------------------------
+# --------------------------------------------------------------------------
 # Start of the calculation
-#--------------------------------------------------------------------------
+# --------------------------------------------------------------------------
 
 #deltaS = 24;
 sfac = 0.0248826675584615                   # sfac = 1/(40*(35.16504/35)).
@@ -163,7 +163,7 @@ v = @. v000 + xs*(v100 + xs*(v200 + xs*(v300 + xs*(v400 + xs*(v500
 
 rho = 1 ./ v
 
-#--------------------------------------------------------------------------
+# --------------------------------------------------------------------------
 # This function calculates rho using the computationally-efficient
 # expression for specific volume in terms of SA, CT and p.  If one wanted
 # to compute rho from SA, CT, and p with the full TEOS-10 Gibbs function,
@@ -180,6 +180,6 @@ rho = 1 ./ v
 #
 #    [rho, ~, ~] = gsw_rho_alpha_beta_CT_exact(SA,CT,p)
 #
-#-----------------This is the end of the alternative code------------------
+# -----------------This is the end of the alternative code------------------
 
 end

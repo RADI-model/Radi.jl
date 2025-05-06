@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 module CO2System
 
 # This has been extended for Radi.jl to include ammonia and sulfide internally.
@@ -291,9 +292,9 @@ function CO2SYS(
 
 
 
-#**************************************************************************
+# **************************************************************************
 # NOTHING BELOW THIS SHOULD REQUIRE EDITING BY USER!
-#**************************************************************************
+# **************************************************************************
 
 
 
@@ -731,9 +732,9 @@ end # end main function
 
 
 
-#**************************************************************************
+# **************************************************************************
 # Subroutines:
-#**************************************************************************
+# **************************************************************************
 
 
 
@@ -1012,7 +1013,7 @@ if any(F)
 end
 
 
-	
+
 # Calculate KNH4 and KH2S: added by J. Sharp
 KNH4           = fill(NaN,ntps); KH2S       = fill(NaN,ntps);
 PKNH4          = fill(NaN,ntps); lnKH2S     = fill(NaN,ntps);
@@ -1329,8 +1330,8 @@ if any(F)
         SWStoTOT[F];                # convert to SWS pH scale
 end
 
-#***************************************************************************
-#CorrectKsForPressureNow:
+# ***************************************************************************
+# CorrectKsForPressureNow:
 # Currently: For WhichKs# = 1 to 7, all Ks (except KF and KS, which are on
 #       the free scale) are on the SWS scale.
 #       For WhichKs# = 6, KW set to 0, KP1, KP2, KP3, KSi don't matter.
@@ -1343,7 +1344,7 @@ end
 # These are valid for the SWS pH scale, but the difference between this and
 # the total only yields a difference of .004 pH units at 1000 bars, much
 # less than the uncertainties in the values.
-#****************************************************************************
+# ****************************************************************************
 # The sources used are:
 # Millero, 1995:
 #       Millero, F. J., Thermodynamics of the carbon dioxide system in the
@@ -1383,7 +1384,7 @@ end
 # Edmond, John M. and Gieskes, J. M. T. M., The calculation of the degree of
 #       seawater with respect to calcium carbonate under in situ conditions,
 #       Geochemica et Cosmochemica Acta, 34:1261-1291, 1970.
-#****************************************************************************
+# ****************************************************************************
 # These references often disagree and give different fits for the same thing.
 # They are not always just an update either; that is, Millero, 1995 may agree
 #       with Millero, 1979, but differ from Millero, 1983.
@@ -1394,10 +1395,10 @@ end
 # For WhichKs# = 8 (freshwater) the values are from Millero, 1983 (for K1, K2,
 #       and KW). The other aren't used (TB = TS = TF = TP = TSi = 0.), so
 #       including the factors won't matter.
-#****************************************************************************
+# ****************************************************************************
 #       deltaVs are in cm3/mole
 #       Kappas are in cm3/mole/bar
-#****************************************************************************
+# ****************************************************************************
 
 #CorrectK1K2KBForPressure:
 deltaV  = fill(NaN,ntps); Kappa   = fill(NaN,ntps)

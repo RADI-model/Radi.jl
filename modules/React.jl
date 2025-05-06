@@ -50,7 +50,21 @@ function degradationfactors(
         dtSO4 / (KM_dtSO4 + dtSO4)
     fdCH4 = Mi_dO2 * Mi_dtNO3 * Mi_pMnO2 * Mi_pFeOH3 * Mi_dtSO4
     fox = fdO2 + fdtNO3 + fpMnO2 + fpFeOH3 + fdtSO4 + fdCH4
-    return fdO2, fdtNO3, fpMnO2, fpFeOH3, fdtSO4, fdCH4, fox
+
+    # Normalize factors
+    fdO2N = fdO2 /= fox
+    fdtNO3N = fdtNO3  /= fox
+    fpMnO2N = fpMnO2 /= fox
+    fpFeOH3N = fpFeOH3 /= fox
+    fdtSO4N = fdtSO4 /= fox
+    fdCH4N = fdCH4 /= fox
+
+
+    foxN = fdO2N + fdtNO3N + fpMnO2N + fpFeOH3N + fdtSO4N + fdCH4N
+
+
+
+    return fdO2N, fdtNO3N, fpMnO2N, fpFeOH3N, fdtSO4N, fdCH4N, foxN
 end # function degradationfactors
 
 
@@ -106,7 +120,8 @@ const kMnII_redox = 1e6
 const kFeII_redox = 1e6
 const kNH3_redox = 1e4
 const kH2S_redox = 3e5
-
+const kCH4_O2redox = 1e7
+const kCH4_SO4redox = 1e7
 
 "Redox reaction rates."
 function redox(
@@ -115,12 +130,16 @@ function redox(
     dtH2S::Float64,
     dFeII::Float64,
     dMnII::Float64,
+    dCH4::Float64,
+    dtSO4::Float64,
 )
     R_NH3_redox = kNH3_redox * dtNH4 * dO2
     R_H2S_redox = kH2S_redox * dtH2S * dO2
     R_MnII_redox = kMnII_redox * dMnII * dO2
     R_FeII_redox = kFeII_redox * dFeII * dO2
-    return R_MnII_redox, R_FeII_redox, R_NH3_redox, R_H2S_redox
+    R_CH4_O2redox = kCH4_O2redox * dCH4 * dO2
+    R_CH4_SO4redox = kCH4_SO4redox * dCH4 * dtSO4
+    return R_MnII_redox, R_FeII_redox, R_NH3_redox, R_H2S_redox, R_CH4_O2redox, R_CH4_SO4redox
 end # function redox
 
 
@@ -176,6 +195,7 @@ function getreactions(
     dtH2S::Float64,
     dFeII::Float64,
     dMnII::Float64,
+    dCH4::Float64,
     pfoc_kfast::Float64,
     psoc_kslow::Float64,
     pcalcite::Float64,
@@ -202,9 +222,8 @@ function getreactions(
         Rslow_total,
     ) = degrade(dO2, dtNO3, pMnO2, pFeOH3, dtSO4, pfoc_kfast, psoc_kslow)
     # Redox reactions
-    R_dMnII, R_dFeII, R_dNH3, R_dH2S = redox(dO2, dtNH4, dtH2S, dFeII, dMnII)
-    Rdiss_calcite, Rdiss_aragonite, Rprec_calcite, Rprec_aragonite =
-        dissolve_precipitate_CaCO3(pcalcite, paragonite, dCa, dCO3, KCa, KAr)
+    R_dMnII, R_dFeII, R_dNH3, R_dH2S, R_CH4_O2redox,  R_CH4_SO4redox = redox(dO2, dtNH4, dtH2S, dFeII, dMnII, dCH4, dtSO4)
+    Rdiss_calcite, Rdiss_aragonite, Rprec_calcite, Rprec_aragonite = dissolve_precipitate_CaCO3(pcalcite, paragonite, dCa, dCO3, KCa, KAr)
     return (
         Rfast_dO2,
         Rslow_dO2,
@@ -224,6 +243,8 @@ function getreactions(
         R_dFeII,
         R_dNH3,
         R_dH2S,
+        R_CH4_O2redox,
+        R_CH4_SO4redox,
         Rdiss_calcite,
         Rdiss_aragonite,
         Rprec_calcite,
@@ -252,6 +273,8 @@ function reactions2rates(
     R_dFeII::Float64,
     R_dNH3::Float64,
     R_dH2S::Float64,
+    R_CH4_O2redox::Float64,
+    R_CH4_SO4redox::Float64,
     Rdiss_calcite::Float64,
     Rdiss_aragonite::Float64,
     Rprec_calcite::Float64,
@@ -274,13 +297,14 @@ function reactions2rates(
     # Total changes in porewater/sediment components from reaction rates
     p2d = phiS_phi_z  # convert particulate to dissolved
     d2p = 1.0 / phiS_phi_z  # convert dissolved to particulate
-    rate_dO2 = p2d * -Rdeg_dO2 - (R_dFeII/4.0 + R_dMnII/2.0 + R_dH2S*2.0 + R_dNH3*2.0)
-    rate_dtCO2 = p2d * (RC * (Rdeg_total - Rdeg_dCH4/2.0) + Rdiss_CaCO3)
+    rate_dO2 = p2d * -Rdeg_dO2 - (R_dFeII/4.0 + R_dMnII/2.0 + R_dH2S*2.0 + R_dNH3*2.0) - 2.0*R_CH4_O2redox
+    rate_dtCO2 = p2d * (RC * (Rdeg_total - Rdeg_dCH4/2.0) + Rdiss_CaCO3) + R_CH4_O2redox + R_CH4_SO4redox
     rate_dtNO3 = p2d * RC * -Rdeg_dtNO3*0.8 + R_dNH3
-    rate_dtSO4 = p2d * RC * -Rdeg_dtSO4/2.0 + R_dH2S
+    rate_dtSO4 = p2d * RC * -Rdeg_dtSO4/2.0 + R_dH2S - R_CH4_SO4redox
+    rate_dCH4 = p2d * RC * Rdeg_dCH4/2.0 - R_CH4_O2redox - R_CH4_SO4redox
     rate_dtPO4 = p2d * RP * Rdeg_total
     rate_dtNH4 = p2d * RN * Rdeg_total - R_dNH3
-    rate_dtH2S = p2d * RC * Rdeg_dtSO4/2.0 - R_dH2S
+    rate_dtH2S = p2d * RC * Rdeg_dtSO4/2.0 - R_dH2S + R_CH4_SO4redox
     rate_dFeII = p2d * RC * Rdeg_pFeOH3*4.0 - R_dFeII
     rate_dMnII = p2d * RC * Rdeg_pMnO2*2.0 - R_dMnII
     rate_pfoc = -Rfast_total
@@ -295,7 +319,8 @@ function reactions2rates(
             (RN - RP + 4.0RC) * Rdeg_pMnO2 +
             (RN - RP + 8.0RC) * Rdeg_pFeOH3 +
             (RN - RP + 1.0RC) * Rdeg_dtSO4 +
-            2.0 * Rdiss_CaCO3) -
+            2.0 * Rdiss_CaCO3) + 
+            2.0 * R_CH4_SO4redox -
             2.0 * (R_dMnII + R_dFeII + R_dNH3 + R_dH2S)
     # CaCO3 minerals
     rate_pcalcite = - Rdiss_calcite + Rprec_calcite
@@ -310,6 +335,7 @@ function reactions2rates(
         rate_dtH2S,
         rate_dFeII,
         rate_dMnII,
+        rate_dCH4,
         rate_dalk,
         rate_dCa,
         rate_pfoc,
@@ -318,33 +344,42 @@ function reactions2rates(
         rate_pMnO2,
         rate_pcalcite,
         rate_paragonite,
+
+        Rdeg_dO2, 
+        Rdeg_dtNO3, 
+        Rdeg_dtSO4, 
+        Rdeg_pFeOH3, 
+        Rdeg_pMnO2, 
+        Rdeg_dCH4,
+        Rdeg_total
     )
 end # function reactions2rates
 
 
 "Rates of change of each component."
 function rates(
-    dO2::Float64,
-    dtNO3::Float64,
-    pMnO2::Float64,
-    pFeOH3::Float64,
-    dtSO4::Float64,
-    dtNH4::Float64,
-    dtH2S::Float64,
-    dFeII::Float64,
-    dMnII::Float64,
-    pfoc_kfast::Float64,
-    psoc_kslow::Float64,
-    pcalcite::Float64,
-    paragonite::Float64,
-    dCa::Float64,
-    dCO3::Float64,
-    KCa::Float64,
-    KAr::Float64,
-    phiS_phi_z::Float64,
-    RC::Float64,
-    RN::Float64,
-    RP::Float64,
+    dO2,
+    dtNO3,
+    pMnO2,
+    pFeOH3,
+    dtSO4,
+    dtNH4,
+    dtH2S,
+    dFeII,
+    dMnII,
+    dCH4,
+    pfoc_kfast,
+    psoc_kslow,
+    pcalcite,
+    paragonite,
+    dCa,
+    dCO3,
+    KCa,
+    KAr,
+    phiS_phi_z,
+    RC,
+    RN,
+    RP,
 )
     # Get total reaction rates from concentrations
     (
@@ -366,6 +401,8 @@ function rates(
         R_dFeII,
         R_dNH3,
         R_dH2S,
+        R_dCH4_O2redox,
+        R_dCH4_SO4redox,
         Rdiss_calcite,
         Rdiss_aragonite,
         Rprec_calcite,
@@ -380,6 +417,7 @@ function rates(
         dtH2S,
         dFeII,
         dMnII,
+        dCH4,
         pfoc_kfast,
         psoc_kslow,
         pcalcite,
@@ -409,6 +447,8 @@ function rates(
         R_dFeII,
         R_dNH3,
         R_dH2S,
+        R_dCH4_O2redox,
+        R_dCH4_SO4redox,
         Rdiss_calcite,
         Rdiss_aragonite,
         Rprec_calcite,

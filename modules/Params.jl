@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 module Params
 
 "Evaluate the 'Redfield' ratios for particulate organic matter, normalised to C."
@@ -56,6 +57,33 @@ function delta_tort2i(delta_phi::Array{Float64}, phi::Array{Float64},
     return @. 2.0delta_phi/(phi*tort2^2)
 end  # function delta_tort2i
 
+"depth-dependent tortuosity gain"
+function delta_tort2(delta_phi::Array{Float64}, phi::Array{Float64})
+    return @. -2.0delta_phi./phi
+end
+
+"prepare sediment depth vector"
+function prepdepth(depthSed::Float64, z_res::Float64)
+    z_range = 0.0:z_res:depthSed
+    z = array_of_floats = collect(z_range)
+    return z
+end
+
+"Assemble depth-dependent porosity parameters."
+function porosity(
+    phi0::Float64, phiInf::Float64, beta::Float64, depths::Array{Float64},
+)
+    phi = Params.phi(phi0, phiInf, beta, depths)
+    phiS = Params.phiS(phi)  # solid volume fraction
+    phiS_phi = phiS./phi
+    tort2 = Params.tort2(phi)  # tortuosity squared from Boudreau (1996, GCA)
+    delta_phi = Params.delta_phi(phi0, phiInf, beta, depths)
+    delta_phiS = Params.delta_phiS(delta_phi)
+    delta_tort2i = Params.delta_tort2i(delta_phi, phi, tort2)
+    delta_tort2i_tort2 = delta_tort2i.*tort2
+    return phi, phiS, phiS_phi, tort2, delta_phi, delta_phiS, delta_tort2i_tort2
+end  # function porosity
+
 "Calculate the diffusion-by-bioturbation constant coefficient."
 D_bio_0(Fpoc::Float64) = @. 0.0232e-4*(1e2Fpoc)^0.85
 
@@ -76,16 +104,16 @@ function krefractory(depths::Array{Float64,1}, D_bio_0::Float64)
     @. 80.25D_bio_0*exp(-depths)
 end  # function krefractory
 
-"Calculate fast-degrading POC degradation parameter."
-function kfast(Fpoc::Float64, depths::Array{Float64,1}, lambda_f::Float64)
+"Calculate fast-degrading POC degradation parameter." 
+function kfast(Fpoc::Float64, depths)
     kfast_0 = 1.5e-1(1e2Fpoc)^0.85
-    return fill(kfast_0, size(depths))
+    return fill(kfast_0, length(depths))
 end  # function kfast
 
-"Calculate slow-degrading POC degradation parameter."
-function kslow(Fpoc::Float64, depths::Array{Float64,1}, lambda_s::Float64)
+"Calculate slow-degrading POC degradation parameter." 
+function kslow(Fpoc::Float64, depths)
     kslow_0 = 1.3e-4(1e2Fpoc)^0.85
-    return fill(kslow_0, size(depths))
+    return fill(kslow_0, length(depths))
 end  # function kslow
 
 "Calculate bulk burial velocity at the sediment-water interface in m/a."
@@ -95,10 +123,10 @@ x0(Fp::Float64, rho_p::Float64, phiS_2::Float64) = Fp/(rho_p*phiS_2)
 xinf(x0::Float64, phiS_2::Float64, phiS_e2::Float64) = x0*phiS_2/phiS_e2
 
 "Calculate porewater burial velocity in m/a."
-u(xinf::Float64, phi::Array{Float64}) = xinf*phi[end-1]./phi
+u(xinf::Float64, phi::Array{Float64}) = xinf*phi[end]./phi
 
 "Calculate solid burial velocity in m/a."
-w(xinf::Float64, phiS::Array{Float64}) = xinf*phiS[end-1]./phiS
+w(xinf::Float64, phiS::Array{Float64}) = xinf*phiS[end]./phiS
 
 "Calculate half of the cell Peclet number (Boudreau 1996 GCA, eq. 97)."
 function Peh(w::Array{Float64}, z_res::Float64, D_bio::Array{Float64})
@@ -146,6 +174,18 @@ D_dHCO3(T::Float64) = 0.015179 + 0.000795T
 "Calcium diffusion coefficient in m^2/a."
 D_dCa(T::Float64) = 0.011771 + 0.000529T
 
+"Methane diffusion coefficient  in m^2/a."
+D_dCH4(T::Float64)=0.041628576888000035+0.00076369T
+
+
+"Function is already included in RADIv2 and can be used, but not used in published results"
+function disp_coeff(wave_height::Float64, wavelength::Float64, period::Float64, permeability::Float64, depth::Float64, depths::Array{Float64})
+    Wnumb = 2π/wavelength
+    ang_freq = 2π/period
+    return @. 3600*24*365.25*(π*permeability*wave_height/(wavelength*ang_freq^0.5*cosh(Wnumb*depth))).^2*exp(-2*Wnumb.*depths)  
+    #[m2/a] dipersion coefficient Eq. 4.146 in Boudreau (1997)
+end
+
 "Calculate alpha_0 parameter for irrigation (Archer et al. 2002)."
 function alpha_0(Fpoc::Float64, dO2_w::Float64)
     return @. 11.0*(atan((1e2Fpoc*5.0 - 400.0)/400.0)/pi + 0.5) - 0.9 +
@@ -169,7 +209,17 @@ function APPW(w::Array{Float64}, delta_D_bio::Array{Float64},
     return @. w - delta_D_bio - delta_phiS*D_bio/phiS
 end  # function APPW
 
+function DFF(tort2, delta_phi, phi, delta_tort2)
+    return (tort2 .* delta_phi ./ phi - delta_tort2)./ (tort2.^2)
+end
+
 "Calculate TR convenience term."
 TR(z_res::Float64, tort2_2::Float64, dbl::Float64) = 2.0z_res*tort2_2/dbl
+
+"Calculate solute flux"
+function solute_flux(phi0,diff_coef, v0, vw,dbl)
+    Jv = phi0*diff_coef*((v0-vw)/dbl)
+    return (Jv)
+end
 
 end  # module Params
