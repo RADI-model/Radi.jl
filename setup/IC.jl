@@ -16,11 +16,11 @@ depth=5.0 #[m] average depth of enclosed bay
 U= 0.07 #m/s
 
 # Define sediment parameters
-phiInf = 0.45 #
-phi0 = 0.71  # 
+phiInf = 0.45 # sediment porosity at infinite depth
+phi0 = 0.71  # sediment porosity at the surface
 beta = 33.0  # sediment porosity-depth relationship parameter
 
-permeability=6.6e-12 #
+permeability=6.6e-12 # sediment permeability
 
 # Define characteristic depths
 lambda_b = 0.08  # for bioturbation / m
@@ -29,19 +29,17 @@ lambda_s = 1.0  # for slow-degrading POC / m
 lambda_i = 0.018 # for irrigation / m
 
 # Define overlying water column properties
-
-#units are mol/m3
-
 T = 7.967995901806943  # temperature / degC
 S = 35.136  # practical salinity
 P = 167.97593908354008  # pressure at seafloor / dbar (1atm = 10.1325 dbar )
-# Concentrations all in mol/kg
+
+# Concentrations all in mol/kg (will be made mol/m3 in the model for ensemble runs where S and T might differ) 
 dO2_w = 250e-6 # dissolved oxygen
 dtCO2_w = 2164.0e-6 # dissolved inorganic carbon
-dtNO3_w = 4.4e-6 #
+dtNO3_w = 4.4e-6 # dissolved nitrate
 dtSO4_w = (29264.2e-6S/35) # estimated omputed from salinity (Millero, 2013)
 dtPO4_w = 1.0e-6 # total phosphate
-dtNH4_w = 6.0e-6 
+dtNH4_w = 6.0e-6
 dtH2S_w = 0.0  
 dFeII_w =  4.186537551421602e-8 
 dMnII_w = 2.1788197604572425e-7 
@@ -49,11 +47,7 @@ dCH4_w = 0.1e-6
 dalk_w = 2300.4e-6  # total alkalinity
 dSi_w = 4.1e-6 # total silicate
 
-# +
 # Define organic matter flux to the surface sediment
-
-#these values are not known and are important, I can imagine the flux to be higher in coastal regions. 
-
 Fpom = 135.0 # flux of POM to seafloor / g/m^2/a, divide by Mpom in Model to get mol/m^2/a
 Fpom_r = 0.00  # refractory fraction of POM
 Fpom_s = 0.48068700143424825 # slow-degrading fraction of POM
@@ -64,11 +58,10 @@ Fcalcite = 0.5  # flux of calcite to the seafloor / mol/m^2/a
 Faragonite = 0.0  # flux of aragonite to the seafloor / mol/m^2/a
 Fclay = (2.0 / 360.31)*80 # currently unreactive, can be used to play with the sedimentation rate
 rho_p = 2.65e6  # average density of all solid matter / g/m^3
-# -
 
 # Define initial conditions within the sediment (scalars or arrays)
-dO2_i = copy(dO2_w)  # dissolved oxygen / mol/m^3
-dtCO2_i = copy(dtCO2_w)  # dissolved inorganic carbon / mol/m^3
+dO2_i = copy(dO2_w)  # dissolved oxygen
+dtCO2_i = copy(dtCO2_w)  # dissolved inorganic carbon
 dtNO3_i = copy(dtNO3_w)
 dtSO4_i = copy(dtSO4_w)
 dtPO4_i = copy(dtPO4_w)
