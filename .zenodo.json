@@ -4,6 +4,11 @@
     "title": "Radi.jl: the reactive-advective-diffusive-irrigative diagenetic sediment module in Julia", 
     "creators": [
         {
+            "affiliation": "La Rochelle Université, LIttoral, Environnement et SociétéS (LIENSs), La Rochelle, France", 
+            "name": "van der Zant, Hinne F.",
+            "orcid": "0009-0008-2568-8653"
+        },
+        {
             "affiliation": "NIOZ Royal Netherlands Institute for Sea Research, Department of Ocean Systems, Texel, the Netherlands", 
             "name": "Humphreys, Matthew P.",
             "orcid": "0000-0002-9371-7128"
