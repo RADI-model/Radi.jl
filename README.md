@@ -6,46 +6,75 @@ The one-dimensional reactive-advective-diffusive-irrigative diagenetic sediment 
 
 - [Radi.jl](#radijl)
   - [Instructions](#instructions)
-    - [Run the model in Julia](#run-the-model-in-julia)
-    - [Plot the results in GNU Octave/MATLAB](#plot-the-results-in-gnu-octavematlab)
+    - [Run the  single model in Julia](#run-the-single-model-in-julia)
+    - [Run the ensemble model in Julia](#run-the-ensemble-model-in-julia)
+    - [Run the optimization model in Julia](#run-the-optimization-model-in-julia)
   - [Citation](#citation)
 
 ## Instructions
 
-### Run the model in Julia
-
-Clone or otherwise save this repo locally.  You need at least the main [Radi.jl](Radi.jl) file and the directory [modules](modules) plus all its contents.
+Clone or otherwise save this repo locally.  You need at least the version of the runfile that you would like to run (e.g. runfile, runfile_ensemble or runfile_opt) file and the directory [modules](modules) plus all its contents.
 
 Next, prepare a setup script (e.g. [setup/IC_W29.jl](setup/IC_W29.jl)) that contains the initial conditions for the problem to be investigated.
 
-Then, in Julia:
+Next, please make sure the following packages are installed in julia (can be installed in jupyter notebook with the command: import Pkg; Pkg.add("PackageName")
+or in the julia terminal by: entering the package manager by pressing "]" and pkg> add "PackageName")
+
+The following packages are needed to run RADIv2:
+Distributed, MAT, DifferentialEquations, BenchmarkTools, ProgressLogging.
+The packages: Plots and JLD2 are also handy to plot output (Plots) and save RADIv2 outputs locally (JLD2)
+
+RADIv2 uses Julia's DifferentialEquations.jl package to solve the transport equations. https://docs.sciml.ai/DiffEqDocs/stable/ provides a comprehensive overview of this package, including how to use it and its options.
+
+### Run the single model in Julia
+
+To run the single model, ensure that the correct initial conditions (IC) are specified in the `runfile`. If the required packages (see installation instructions above) are properly installed, the model should run without modification.  
+To customize the simulation, you can modify the following line:
+
 
 ```julia
-# Import the RADI model
-include("Radi.jl")
-
-# Run RADI for the first time
-results = Radi.go("setup/IC_W29.jl")  # or a different setup script
-
-# Access the different variables:
-results[:savetimes]  # time of savepoints in years
-results[:depths]  # model depths in m
-results[:dO2]  # dissolved oxygen (rows = depths, columns = savetimes)
-# and so on.
-
-# Do a new run starting at the previous endpoint (overwrites previous results):
-results = Radi.again(results)
-# this uses internal settings from whichever file was last used with Radi.go().
-
-# At any point, save the results as "results/IC_W29.mat":
-Radi.save(results)  # overwrite original file, or...
-Radi.save(results, "_more")  # ... append "_more" to the file name
-# the "IC_W29" part of the filename is defined by `modelrun` in the setup file
+@time single_sol = solve(prob, Rosenbrock23(autodiff=false), save_everystep=false)
 ```
 
-### Plot the results in GNU Octave/MATLAB
+This line solves the system using the Rosenbrock23 solver. You may replace it with other solvers, adjust tolerances, or set additional options. For more details on customizing the solver and available methods, refer to the [DifferentialEquations.jl documentation](https://diffeq.sciml.ai/).
 
-Julia does not generate a plot of the results, but instead saves the results to a .mat file in the [results](results) directory.  Use [plot/everything.m](plot/everything.m) to import and plot the results saved by Julia in GNU Octave/MATLAB.
+### Run the ensemble model in Julia
+
+To run the ensemble version of the model, ensure that the correct IC are set in the runfile_ensemble. In the provided example script, the model perturbs parameters such as T, U, omegaCa, FPOM, FPIC, kfast, kslow, and the fractions of fast- and slow-degrading POM (Fpom_f and Fpom_s).
+
+You can adapt the model to vary other parameters by passing them into the calculate_constants() function. This allows each trajectory in the ensemble to use its own set of constants. These values can be either randomly generated (as in the example) or manually specified.
+
+The number of ensemble members is set with:
+
+```julia
+trajectories = x
+```
+
+You can tune the batch size for parallel execution depending on your system’s capacity. The batch mechanism helps avoid overloading system resources when using multithreading.
+
+To enable multithreading, you must manually set the number of threads for Julia, as it defaults to one. This can be done as follows:
+
+export JULIA_NUM_THREADS=8 in macOS and Linux, and JULIA_NUM_THREADS=8 in Windows. 
+
+Finally, ensure that the solver is called with threading enabled:
+
+```julia
+batch_sols = solve(
+            local_prob,
+            Rosenbrock23(autodiff=false),
+            EnsembleThreads(), #enables multithreading
+            trajectories=this_batch_size,
+            callback=callback,  
+            save_everystep=false
+        )
+```
+
+For more details on parallel ensemble simulations and solver customization, consult the [DifferentialEquations.jl documentation](https://diffeq.sciml.ai/) documentation.
+
+
+### Run the optimization model
+
+To run the optimization model, make sure the following Julia packages are installed: BlackBoxOptim and Optim. The optimization process relies on a custom-defined loss function that assigns penalties when the model fails to meet specified criteria. This setup uses an ensemble solver, allowing the loss to be evaluated over multiple trajectories. In the example script provided, penalties are applied if model outputs such as DIC, TA, and O₂ flux fall outside predefined target ranges. However, the loss function is fully customizable—users can define it to optimize any input or output variable of the model, depending on their objectives.
 
 ## Citation
 
@@ -62,4 +91,4 @@ The DOI above is the 'concept DOI' for all versions of Radi.jl; it will always a
 
 The rest of the citation remains the same.
 
-There is also a manuscript in preparation that will describe RADI in detail.  Radi.jl v1.0 will be released following peer review.  Please check back here later for details.
+There is also a manuscript in preparation that will describe RADI in detail.  Radi.jl v1.0 will be released following peer review.  Please check back here later for details. 
