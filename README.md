@@ -2,6 +2,8 @@
 
 [![DOI](https://img.shields.io/badge/DOI-10.5281%2Fzenodo.4680228-informational)](https://doi.org/10.5281/zenodo.4680228)
 
+> "What do I know of man's destiny? I could tell you more about radishes." - Samuel Beckett
+
 The one-dimensional reactive-advective-diffusive-irrigative diagenetic sediment module in Julia.
 
 - [Radi.jl](#radijl)
@@ -80,15 +82,21 @@ To run the optimization model, make sure the following Julia packages are instal
 
 To cite this Julia implementation of RADI, please use:
 
-> Humphreys, M. P., and Sulpis, O. (2021). **Radi.jl: the reactive-advective-diffusive-irrigative diagenetic sediment module in Julia.**  *Zenodo.*  [doi:10.5281/zenodo.4680228](https://doi.org/10.5281/zenodo.4680228).
+> van der Zant, H. F., Humphreys, M. P., and Sulpis, O. (2025). **Radi.jl: the reactive-advective-diffusive-irrigative diagenetic sediment module in Julia.**  *Zenodo.*  [doi:10.5281/zenodo.4680228](https://doi.org/10.5281/zenodo.4680228).
 
 [Bibtex version available here.](radi_jl_2021.bib)
 
 The DOI above is the 'concept DOI' for all versions of Radi.jl; it will always automatically resolve to the latest release.  If you use a specific version of Radi.jl, please explicitly state the version, and switch to the relevant version-specific DOI:
 
+  * v2.0.0-rc.1: [doi:10.5281/zenodo.15397043](https://doi.org/10.5281/zenodo.15397043).
+  * v1.0: [doi:10.5281/zenodo.7009185](https://doi.org/10.5281/zenodo.7009185).
   * v0.3: [doi:10.5281/zenodo.5005650](https://doi.org/10.5281/zenodo.5005650).
   * v0.2: [doi:10.5281/zenodo.4680229](https://doi.org/10.5281/zenodo.4680229).
 
 The rest of the citation remains the same.
 
-There is also a manuscript in preparation that will describe RADI in detail.  Radi.jl v1.0 will be released following peer review.  Please check back here later for details. 
+RADI v1 is described in the following manuscript:
+
+> Sulpis, O., Humphreys, M. P., Wilhelmus, M., Carroll, D., Berelson, W., Menemenlis, D., Middelburg, J. and Adkins, J. (2022).  **RADIv1: a non-steady-state early diagenetic model for ocean sediments in Julia and MATLAB/GNU Octave.**  *Geoscientific Model Development* 15(5), 2105-2131.  [doi:10.5194/gmd-15-2105-2022](https://doi.org/10.5194/gmd-15-2105-2022).
+
+There is also a manuscript in preparation that will describe RADI v2 in detail.  Radi.jl v2.0.0 will be released following peer review.  Please check back here later for details.
