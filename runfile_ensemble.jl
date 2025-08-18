@@ -958,7 +958,7 @@ function physics_ensamble!(du, u , p ,t)
                     advectsolid(u[16,z_idx],u[16,z_idx+1],u[16,z_idx-1], APPW[z_idx], sigma[z_idx],
                             sigma1p[z_idx], sigma1m[z_idx]) + rates[16, z_idx]
                      
-             du[17, z_idx]= diffuse(u[17, z_idx+1], u[17, z_idx], u[17, z_idx-1], D_bio[z_idx]) +
+             du[17, z_idx]= diffuse(u[17, z_idx-1], u[17, z_idx], u[17, z_idx+1], D_bio[z_idx]) +
                     advectsolid(u[17,z_idx],u[17,z_idx+1],u[17,z_idx-1], APPW[z_idx], sigma[z_idx],
                             sigma1p[z_idx], sigma1m[z_idx]) + rates[17, z_idx]
                      
